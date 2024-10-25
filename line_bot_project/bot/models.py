@@ -55,14 +55,13 @@ class UserTag(models.Model):
                 plt.bar(x + offset,  # x 軸位置加上偏移
                     tag_data['tag_count'], 
                     bar_width,  # 設定寬度
-                    label=f'標籤: {tag_type}',
+                    label=f'Tag: {tag_type}',
                     color=colors[i],
                     alpha=0.7)
             
             # 設定 x 軸刻度和標籤
-            plt.xlabel('日期', fontsize=12)
-            plt.ylabel('標籤數量', fontsize=12)
-            plt.title('每日用戶標籤統計', fontsize=14, pad=20)
+            plt.xlabel('Date', fontsize=12)
+            plt.ylabel('Tag Count', fontsize=12)
             
             # 設定 x 軸刻度位置和標籤
             plt.xticks(x, df['date'].unique(), rotation=45)
