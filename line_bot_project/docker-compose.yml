@@ -18,11 +18,10 @@ services:
 
   ngrok:
     image: wernight/ngrok:latest
-    command: ["ngrok", "http", "web:8000", "--log=stdout"]  # 添加日誌輸出
+    container_name: ngrok
+    command: ngrok http web:8000 --authtoken ${NGROK_AUTH_TOKEN}  # 直接在命令中使用 authtoken
     ports:
       - "4040:4040"
-    environment:
-      - NGROK_AUTH=${NGROK_AUTH_TOKEN}
     depends_on:
       - web
     networks:
