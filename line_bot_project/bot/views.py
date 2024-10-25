@@ -16,31 +16,7 @@ from urllib.parse import parse_qsl
 from django.views import View
 from django.shortcuts import render
 from .models import UserTag
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
-from rest_framework import status
-from .services import LineMessageService
-
-@api_view(['POST'])
-def push_message(request):
-    user_id = request.data.get('user_id')
-    
-    if not user_id:
-        return Response(
-            {'error': '必須提供 user_id'}, 
-            status=status.HTTP_400_BAD_REQUEST
-        )
-    
-    service = LineMessageService()
-    success = service.push_flex_message_to_user(user_id)
-    
-    if success:
-        return Response({'message': f'成功推送給用戶 {user_id}'})
-    else:
-        return Response(
-            {'error': f'推送失敗 {user_id}'}, 
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
+      
 @method_decorator(csrf_exempt, name='dispatch')
 class LineWebhookView(View):
     def __init__(self):
@@ -214,3 +190,41 @@ class TagStatsView(View):
             'graph': graph
         }
         return render(request, 'bot/tag_stats.html', context)
+
+@method_decorator(csrf_exempt, name='dispatch')
+class PushMessageView(View):
+    def post(self, request, *args, **kwargs):
+        try:
+            data = json.loads(request.body)
+            user_id = data.get('user_id')
+            
+            if not user_id:
+                return JsonResponse({
+                    'success': False,
+                    'message': '缺少用戶ID'
+                })
+
+            line_service = LineMessageService()
+            result = line_service.push_flex_message_to_user(user_id)
+            
+            if result:
+                return JsonResponse({
+                    'success': True,
+                    'message': f'成功推送消息給用戶 {user_id}'
+                })
+            else:
+                return JsonResponse({
+                    'success': False,
+                    'message': f'推送消息失敗'
+                })
+
+        except json.JSONDecodeError:
+            return JsonResponse({
+                'success': False,
+                'message': '無效的 JSON 格式'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': str(e)
+            })
