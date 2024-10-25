@@ -134,11 +134,10 @@ CSRF_TRUSTED_ORIGINS = ['https://90e8-2001-b400-e787-c4ba-c113-1f5f-4f28-65e3.ng
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('POSTGRES_DB', 'line_bot_db'),
-        'USER': os.environ.get('POSTGRES_USER', 'postgres'),
-        'PASSWORD': os.environ.get('POSTGRES_PASSWORD', 'password'),
-        'HOST': os.environ.get('POSTGRES_HOST', 'db'),
-        # 'HOST': 'localhost',
-        'PORT': os.environ.get('POSTGRES_PORT', '5433'),
+        'NAME': 'line_bot_db',
+        'USER': 'postgres',
+        'PASSWORD': 'password',
+        'HOST': 'db',  # 使用 docker-compose 中定義的服務名
+        'PORT': '5432',  # 容器內部端口
     }
 }
