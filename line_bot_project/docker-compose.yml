@@ -17,7 +17,7 @@ services:
   ngrok:
     image: wernight/ngrok:latest
     container_name: ngrok
-    command: ngrok http web:8000 --authtoken ${NGROK_AUTH_TOKEN}  # 直接在命令中使用 authtoken
+    command: ["ngrok", "http", "web:8000", "--log=stdout", "--authtoken=${NGROK_AUTH_TOKEN}"]
     ports:
       - "4040:4040"
     depends_on:
