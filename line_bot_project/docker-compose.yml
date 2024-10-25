@@ -18,12 +18,11 @@ services:
 
   ngrok:
     image: wernight/ngrok:latest
+    command: ["ngrok", "http", "web:8000", "--log=stdout"]  # 添加日誌輸出
     ports:
-      - "4040:4040"  # ngrok web 介面
+      - "4040:4040"
     environment:
-      - NGROK_AUTH=${NGROK_AUTH_TOKEN}  # 您的 ngrok auth token
-      - NGROK_PROTOCOL=http
-      - NGROK_PORT=web:8000  # 指向 web 服務的 8000 端口
+      - NGROK_AUTH=${NGROK_AUTH_TOKEN}
     depends_on:
       - web
     networks:
