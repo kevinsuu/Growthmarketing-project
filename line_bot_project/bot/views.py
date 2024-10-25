@@ -24,19 +24,31 @@ class LineWebhookView(View):
         self.setup_handler()
 
     def setup_handler(self):
-        self._handler = WebhookHandler(settings.LINE_CHANNEL_SECRET)
-        
-        @self._handler.add(FollowEvent)
-        def handle_follow(event):
-            """處理用戶加入好友事件"""
-            # 發送歡迎訊息和 Flex Message
-            self.line_bot_api.reply_message(
-                event.reply_token,
-                [
-                    TextSendMessage(text="感謝您加入！"),
+        @self._handler.add(MessageEvent)
+        def handle_message(event):
+            """處理收到訊息事件"""
+            user_id = event.source.user_id
+            
+            # 追蹤訊息已讀
+            impression_result = self.line_service.track_message_impression(user_id)
+            
+            if event.message.text.lower() == "start":
+                self.line_bot_api.reply_message(
+                    event.reply_token,
                     self.line_service.create_flex_message()
-                ]
-            )
+                )
+            else:
+                reply_message = (
+                    f"訊息已讀！\n"
+                    f"時間: {impression_result['tagged_at']}\n"
+                    f"用戶ID: {user_id}\n"
+                    f"標籤: message_impression"
+                )
+                
+                self.line_bot_api.reply_message(
+                    event.reply_token,
+                    TextSendMessage(text=reply_message)
+                )
 
         @self._handler.add(MessageEvent)
         def handle_message(event):
@@ -73,29 +85,25 @@ class LineWebhookView(View):
         @self._handler.add(PostbackEvent)
         def handle_postback(event):
             data = dict(parse_qsl(event.postback.data))
-            tag_name = f"clicked_{data.get('action')}"
+            action = data.get('action')
             user_id = event.source.user_id
             
-            # 記錄點擊標籤到資料庫
-            result = self.line_service.tag_user(
-                user_id,
-                tag_name
-            )
+            # 追蹤按鈕點擊
+            click_result = self.line_service.track_message_click(user_id, action)
             
-            # 回覆確認訊息
-            if result['success']:
+            if click_result['success']:
                 reply_message = (
-                    f"標籤添加成功！\n"
-                    f"時間: {result['tagged_at']}\n"
+                    f"操作記錄成功！\n"
+                    f"時間: {click_result['tagged_at']}\n"
                     f"用戶ID: {user_id}\n"
-                    f"標籤: {tag_name}"
+                    f"動作: {action}"
                 )
             else:
                 reply_message = (
-                    f"標籤添加失敗\n"
+                    f"操作記錄失敗\n"
                     f"用戶ID: {user_id}\n"
-                    f"標籤: {tag_name}\n"
-                    f"錯誤: {result['message']}"
+                    f"動作: {action}\n"
+                    f"錯誤: {click_result['message']}"
                 )
             
             self.line_bot_api.reply_message(
