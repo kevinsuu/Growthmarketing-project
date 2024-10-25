@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>標籤統計</title>
+    <style>
+        /* 設定中文字體 */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft JhengHei", "微軟正黑體", "Source Han Sans TC", "Noto Sans TC", "PingFang TC", sans-serif;
+        }
+        
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .chart-container {
+            margin-top: 20px;
+            overflow-x: auto;
+        }
+        .stats-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            padding: 20px;
+        }
+        
+        /* 確保表格內的中文正確顯示 */
+        .chinese-text {
+            font-family: "Microsoft JhengHei", "微軟正黑體", "Source Han Sans TC", "Noto Sans TC", "PingFang TC", sans-serif;
+        }
+    </style>
+    <script>
+        function refreshPage() {
+            location.reload();
+        }
+        // 每5秒自動刷新頁面
+        setInterval(refreshPage, 5000);
+    </script>
+</head>
+<body>
+    <div class="stats-container">
+        <h1 class="chinese-text">標籤統計</h1>
+        
+        <div>
+            <h2 class="chinese-text">統計表格</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th class="chinese-text">日期</th>
+                        <th class="chinese-text">用戶ID</th>
+                        <th class="chinese-text">標籤類型</th>
+                        <th class="chinese-text">標籤數量</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for stat in stats %}
+                    <tr>
+                        <td>{{ stat.date }}</td>
+                        <td>{{ stat.user_id }}</td>
+                        <td class="chinese-text">{{ stat.tag_name }}</td>
+                        <td>{{ stat.tag_count }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="chart-container">
+            <h2 class="chinese-text">統計圖表</h2>
+            {% if graph %}
+            <img src="data:image/png;base64,{{ graph }}" alt="標籤統計圖表">
+            {% else %}
+            <p class="chinese-text">暫無數據</p>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>

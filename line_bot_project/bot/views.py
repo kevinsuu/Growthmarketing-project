@@ -13,7 +13,9 @@ from linebot.models import (
 from django.conf import settings
 from .services import LineMessageService
 from urllib.parse import parse_qsl
-
+from django.views import View
+from django.shortcuts import render
+from .models import UserTag
 @method_decorator(csrf_exempt, name='dispatch')
 class LineWebhookView(View):
     def __init__(self):
@@ -179,3 +181,11 @@ class NarrowcastMessageView(View):
                 'success': False,
                 'message': str(e)
             })
+class TagStatsView(View):
+    def get(self, request):
+        stats, graph = UserTag.get_daily_tag_stats()
+        context = {
+            'stats': stats,
+            'graph': graph
+        }
+        return render(request, 'bot/tag_stats.html', context)
