@@ -3,7 +3,7 @@ from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.http import JsonResponse
-
+import json
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import (
@@ -133,3 +133,49 @@ class RemoveRichMenuView(View):
             return JsonResponse({'status': 'success', 'message': 'Rich menu removed'})
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)})
+
+@method_decorator(csrf_exempt, name='dispatch')
+class NarrowcastMessageView(View):
+    def post(self, request, *args, **kwargs):
+        try:
+            data = json.loads(request.body)
+            print(f"收到的請求數據: {data}")  # 添加調試信息
+            
+            tag_name = data.get('tag_name')
+            image_url = data.get('image_url')
+            description = data.get('description')
+            button1_label = data.get('button1_label')
+            button2_label = data.get('button2_label')
+
+            if not all([tag_name, image_url, description, button1_label, button2_label]):
+                return JsonResponse({
+                    'success': False,
+                    'message': '缺少必要參數'
+                })
+
+            line_service = LineMessageService()
+            
+            # 創建自定義 Flex Message
+            flex_message = line_service.create_custom_flex_message(
+                image_url=image_url,
+                description=description,
+                button1_label=button1_label,
+                button2_label=button2_label
+            )
+            
+            # 發送 narrowcast 訊息
+            result = line_service.send_narrowcast_message(tag_name, flex_message)
+            print(f"發送結果: {result}")  # 添加調試信息
+
+            return JsonResponse(result)
+
+        except json.JSONDecodeError:
+            return JsonResponse({
+                'success': False,
+                'message': '無效的 JSON 格式'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': str(e)
+            })

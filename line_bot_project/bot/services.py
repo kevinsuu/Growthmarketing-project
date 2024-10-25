@@ -162,3 +162,104 @@ class LineMessageService:
                 'tagged_at': None,
                 'message': str(e)
             }
+    def send_narrowcast_message(self, tag_name, flex_message=None):
+        """發送針對性訊息"""
+        try:
+            if flex_message is None:
+                flex_message = self.create_flex_message()
+
+            # 從資料庫獲取有該標籤的用戶
+            print(f"開始查詢標籤 {tag_name} 的用戶")
+
+            users = list(UserTag.objects.filter(
+                tag_name=tag_name
+            ).values_list('user_id', flat=True).distinct())
+
+            print(f"找到的用戶數量: {len(users)}")
+            print(f"用戶列表: {users}")
+            if not users:
+                return {
+                    'success': False,
+                    'message': f'找不到標籤 {tag_name} 的用戶'
+                }
+
+            # 分批發送（LINE 限制每次最多 500 個用戶）
+            batch_size = 500
+            success_count = 0
+            failed_count = 0
+
+            for i in range(0, len(users), batch_size):
+                batch_users = users[i:i + batch_size]
+                try:
+                    print(f"正在發送給用戶批次 {i//batch_size + 1}")
+                    self.line_bot_api.multicast(
+                        batch_users,
+                        flex_message
+                    )
+                    success_count += len(batch_users)
+                except Exception as e:
+                    failed_count += len(batch_users)
+                    print(f"批次發送失敗: {str(e)}")
+
+            return {
+                'success': True,
+                'message': f'發送完成: 成功 {success_count} 人, 失敗 {failed_count} 人'
+            }
+
+        except Exception as e:
+            return {
+                'success': False,
+                'message': f'發送錯誤: {str(e)}'
+            }
+
+    def create_custom_flex_message(self, image_url, description, button1_label, button2_label):
+        """創建自定義 Flex Message"""
+        flex_message_json = {
+            "type": "bubble",
+            "hero": {
+                "type": "image",
+                "url": image_url,
+                "size": "full",
+                "aspectRatio": "20:13",
+                "aspectMode": "cover"
+            },
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": description,
+                        "wrap": True,
+                        "weight": "bold",
+                        "size": "xl"
+                    }
+                ]
+            },
+            "footer": {
+                "type": "box",
+                "layout": "horizontal",
+                "spacing": "sm",
+                "contents": [
+                    {
+                        "type": "button",
+                        "style": "primary",
+                        "action": {
+                            "type": "postback",
+                            "label": button1_label,
+                            "data": "action=button1"
+                        }
+                    },
+                    {
+                        "type": "button",
+                        "style": "secondary",
+                        "action": {
+                            "type": "postback",
+                            "label": button2_label,
+                            "data": "action=button2"
+                        }
+                    }
+                ]
+            }
+        }
+        return FlexSendMessage(alt_text='互動訊息', contents=flex_message_json)
