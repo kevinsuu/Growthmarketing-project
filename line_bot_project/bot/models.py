@@ -13,10 +13,13 @@ class UserTag(models.Model):
     user_id = models.CharField(max_length=50)
     tag_name = models.CharField(max_length=100)
     tagged_at = models.DateTimeField(auto_now_add=True)
-    
+    extra_data = models.JSONField(default=dict, blank=True)  # 新增欄位
+
     class Meta:
-        db_table = 'user_tags'
-        
+        indexes = [
+            models.Index(fields=['user_id', 'tag_name']),
+            models.Index(fields=['tagged_at']),
+        ]
     def __str__(self):
         return f"{self.user_id} - {self.tag_name}"
     

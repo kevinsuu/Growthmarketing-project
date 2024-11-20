@@ -36,11 +36,13 @@ class LineWebhookView(View):
             impression_result = self.line_service.track_message_impression(user_id)
             
             if event.message.text.lower() == "start":
+                # 發送 Flex Message
                 self.line_bot_api.reply_message(
                     event.reply_token,
                     self.line_service.create_flex_message()
                 )
             else:
+                # 回覆已讀確認訊息
                 reply_message = (
                     f"訊息已讀！\n"
                     f"時間: {impression_result['tagged_at']}\n"
@@ -52,39 +54,7 @@ class LineWebhookView(View):
                     event.reply_token,
                     TextSendMessage(text=reply_message)
                 )
-
-        @self._handler.add(MessageEvent)
-        def handle_message(event):
-            """處理收到訊息事件"""
-            user_id = event.source.user_id
-            
-            # 記錄已讀標籤到資料庫
-            result = self.line_service.tag_user(
-                user_id,
-                'message_read'
-            )
-            print(f"已讀標籤結果: {result}")
-
-            if event.message.text.lower() == "start":
-                # 發送 Flex Message
-                self.line_bot_api.reply_message(
-                    event.reply_token,
-                    self.line_service.create_flex_message()
-                )
-            else:
-                # 回覆已讀確認訊息
-                reply_message = (
-                    f"訊息已讀！\n"
-                    f"時間: {result['tagged_at']}\n"
-                    f"用戶ID: {user_id}\n"
-                    f"標籤: message_read"
-                )
                 
-                self.line_bot_api.reply_message(
-                    event.reply_token,
-                    TextSendMessage(text=reply_message)
-                )
-
         @self._handler.add(PostbackEvent)
         def handle_postback(event):
             data = dict(parse_qsl(event.postback.data))

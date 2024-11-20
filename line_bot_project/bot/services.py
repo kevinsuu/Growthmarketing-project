@@ -117,28 +117,6 @@ class LineMessageService:
         response = requests.post(url, headers=self.headers, json=payload)
         return response.status_code == 200
 
-    def track_message_impression(self, user_id):
-        """追蹤訊息已讀"""
-        try:
-            # 直接記錄到資料庫，不再依賴 LINE API 的回應
-            result = self.tag_user(user_id, 'message_impression')
-            if result['success']:
-                return {
-                    'success': True,
-                    'tagged_at': result['tagged_at'],
-                    'message': '已讀追蹤成功'
-                }
-            return {
-                'success': False,
-                'tagged_at': None,
-                'message': '已讀追蹤失敗'
-            }
-        except Exception as e:
-            return {
-                'success': False,
-                'tagged_at': None,
-                'message': str(e)
-            }
 
     def track_message_click(self, user_id, action):
         """追蹤訊息點擊"""
@@ -161,55 +139,6 @@ class LineMessageService:
                 'success': False,
                 'tagged_at': None,
                 'message': str(e)
-            }
-    def send_narrowcast_message(self, tag_name, flex_message=None):
-        """發送針對性訊息"""
-        try:
-            if flex_message is None:
-                flex_message = self.create_flex_message()
-
-            # 從資料庫獲取有該標籤的用戶
-            print(f"開始查詢標籤 {tag_name} 的用戶")
-
-            users = list(UserTag.objects.filter(
-                tag_name=tag_name
-            ).values_list('user_id', flat=True).distinct())
-
-            print(f"找到的用戶數量: {len(users)}")
-            print(f"用戶列表: {users}")
-            if not users:
-                return {
-                    'success': False,
-                    'message': f'找不到標籤 {tag_name} 的用戶'
-                }
-
-            # 分批發送（LINE 限制每次最多 500 個用戶）
-            batch_size = 500
-            success_count = 0
-            failed_count = 0
-
-            for i in range(0, len(users), batch_size):
-                batch_users = users[i:i + batch_size]
-                try:
-                    print(f"正在發送給用戶批次 {i//batch_size + 1}")
-                    self.line_bot_api.multicast(
-                        batch_users,
-                        flex_message
-                    )
-                    success_count += len(batch_users)
-                except Exception as e:
-                    failed_count += len(batch_users)
-                    print(f"批次發送失敗: {str(e)}")
-
-            return {
-                'success': True,
-                'message': f'發送完成: 成功 {success_count} 人, 失敗 {failed_count} 人'
-            }
-
-        except Exception as e:
-            return {
-                'success': False,
-                'message': f'發送錯誤: {str(e)}'
             }
 
     def create_custom_flex_message(self, image_url, description, button1_label, button2_label):
@@ -263,3 +192,114 @@ class LineMessageService:
             }
         }
         return FlexSendMessage(alt_text='互動訊息', contents=flex_message_json)
+
+    def send_narrowcast_message(self, tag_name, flex_message=None):
+        """發送針對性訊息並追蹤已讀狀態"""
+        try:
+            if flex_message is None:
+                flex_message = self.create_flex_message()
+
+            # 生成唯一的追蹤 ID
+            tracking_id = str(uuid.uuid4())
+            
+            # 在發送訊息前，先記錄這個追蹤 ID
+            UserTag.objects.create(
+                user_id='system',
+                tag_name=f'message_{tracking_id}',
+                extra_data={'status': 'sent'}
+            )
+
+            # 從資料庫獲取目標用戶
+            users = list(UserTag.objects.filter(
+                tag_name=tag_name
+            ).values_list('user_id', flat=True).distinct())
+
+            if not users:
+                return {
+                    'success': False,
+                    'message': f'找不到標籤 {tag_name} 的用戶'
+                }
+
+            # 分批發送
+            batch_size = 500
+            success_count = 0
+            failed_count = 0
+
+            for i in range(0, len(users), batch_size):
+                batch_users = users[i:i + batch_size]
+                try:
+                    response = self.line_bot_api.multicast(
+                        batch_users,
+                        flex_message,
+                        notification=True,  # 確保會顯示通知
+                        retry_key=tracking_id  # 使用追蹤 ID 作為重試鍵值
+                    )
+                    success_count += len(batch_users)
+                    
+                    # 記錄發送成功的用戶
+                    for user_id in batch_users:
+                        UserTag.objects.create(
+                            user_id=user_id,
+                            tag_name=f'message_sent_{tracking_id}',
+                            extra_data={'status': 'delivered'}
+                        )
+                        
+                except Exception as e:
+                    failed_count += len(batch_users)
+                    print(f"批次發送失敗: {str(e)}")
+
+            return {
+                'success': True,
+                'tracking_id': tracking_id,
+                'message': f'發送完成: 成功 {success_count} 人, 失敗 {failed_count} 人'
+            }
+
+        except Exception as e:
+            return {
+                'success': False,
+                'message': f'發送錯誤: {str(e)}'
+            }
+
+    def track_message_impression(self, user_id):
+        """追蹤訊息已讀"""
+        try:
+            # 檢查是否有未標記已讀的訊息
+            recent_messages = UserTag.objects.filter(
+                user_id=user_id,
+                tag_name__startswith='message_sent_',
+                extra_data__status='delivered'
+            ).order_by('-tagged_at')[:5]  # 只檢查最近的5條訊息
+
+            for message in recent_messages:
+                tracking_id = message.tag_name.split('message_sent_')[1]
+                
+                # 標記為已讀
+                result = self.tag_user(
+                    user_id=user_id,
+                    tag_name=f'message_read_{tracking_id}'
+                )
+                
+                # 更新訊息狀態
+                message.extra_data['status'] = 'read'
+                message.save()
+
+                if result['success']:
+                    return {
+                        'success': True,
+                        'tagged_at': result['tagged_at'],
+                        'tracking_id': tracking_id,
+                        'message': '已讀追蹤成功'
+                    }
+
+            return {
+                'success': False,
+                'tagged_at': None,
+                'message': '沒有找到需要標記已讀的訊息'
+            }
+
+        except Exception as e:
+            return {
+                'success': False,
+                'tagged_at': None,
+                'message': str(e)
+            }
