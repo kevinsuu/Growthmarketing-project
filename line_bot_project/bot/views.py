@@ -17,10 +17,8 @@ from django.views import View
 from django.shortcuts import render
 from .models import UserTag
 import logging
+
 logger = logging.getLogger(__name__)
-
-
-
 @method_decorator(csrf_exempt, name='dispatch')
 class LineWebhookView(View):
     def __init__(self):
@@ -36,13 +34,43 @@ class LineWebhookView(View):
             """處理收到訊息事件"""
             user_id = event.source.user_id
             
+            # 追蹤訊息已讀
+            impression_result = self.line_service.track_message_impression(user_id)
+            
+            if event.message.text.lower() == "start":
+                self.line_bot_api.reply_message(
+                    event.reply_token,
+                    self.line_service.create_flex_message()
+                )
+            else:
+                result = self.line_service.tag_user(
+                user_id,
+                    'user_read1120'
+                )
+                reply_message = (
+                    f"訊息已讀！\n"
+                    f"時間: {impression_result['tagged_at']}\n"
+                    f"用戶ID: {user_id}\n"
+                    f"標籤: message_impression"
+                )
+                
+                self.line_bot_api.reply_message(
+                    event.reply_token,
+                    TextSendMessage(text=reply_message)
+                )
+
+        @self._handler.add(MessageEvent)
+        def handle_message(event):
+            """處理收到訊息事件"""
+            user_id = event.source.user_id
+            
             # 記錄已讀標籤到資料庫
             result = self.line_service.tag_user(
                 user_id,
                 'message_read'
             )
-            logger.debug(f"已讀標籤結果: {result}")
-            logger.debug(f"event.message.text: {event.message.text}")
+            logger.info(f"已讀標籤結果: {result}")
+
             if event.message.text.lower() == "start":
                 # 發送 Flex Message
                 self.line_bot_api.reply_message(
@@ -92,6 +120,19 @@ class LineWebhookView(View):
                 TextSendMessage(text=reply_message)
             )
 
+    def post(self, request, *args, **kwargs):
+        signature = request.headers.get('X-Line-Signature', '')
+        body = request.body.decode('utf-8')
+        
+        try:
+            self._handler.handle(body, signature)
+            return HttpResponse(status=200)
+        except InvalidSignatureError:
+            return HttpResponse(status=400)
+        except Exception as e:
+            logger.info(f"Error: {str(e)}")
+            return HttpResponse(status=500)
+
 @method_decorator(csrf_exempt, name='dispatch')
 class RemoveRichMenuView(View):
     def post(self, request, *args, **kwargs):
@@ -107,7 +148,7 @@ class NarrowcastMessageView(View):
     def post(self, request, *args, **kwargs):
         try:
             data = json.loads(request.body)
-            logger.debug(f"收到的請求數據: {data}")  # 添加調試信息
+            logger.info(f"收到的請求數據: {data}")  # 添加調試信息
             
             tag_name = data.get('tag_name')
             image_url = data.get('image_url')
@@ -133,7 +174,7 @@ class NarrowcastMessageView(View):
             
             # 發送 narrowcast 訊息
             result = line_service.send_narrowcast_message(tag_name, flex_message)
-            logger.debug(f"發送結果: {result}")  # 添加調試信息
+            logger.info(f"發送結果: {result}")  # 添加調試信息
 
             return JsonResponse(result)
 
