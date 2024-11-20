@@ -16,7 +16,9 @@ from urllib.parse import parse_qsl
 from django.views import View
 from django.shortcuts import render
 from .models import UserTag
-      
+import logging
+logger = logging.getLogger(__name__)
+
 
 
 @method_decorator(csrf_exempt, name='dispatch')
@@ -39,8 +41,8 @@ class LineWebhookView(View):
                 user_id,
                 'message_read'
             )
-            print(f"已讀標籤結果: {result}")
-            print(f"event.message.text: {event.message.text}")
+            logger.debug(f"已讀標籤結果: {result}")
+            logger.debug(f"event.message.text: {event.message.text}")
             if event.message.text.lower() == "start":
                 # 發送 Flex Message
                 self.line_bot_api.reply_message(
@@ -105,7 +107,7 @@ class NarrowcastMessageView(View):
     def post(self, request, *args, **kwargs):
         try:
             data = json.loads(request.body)
-            print(f"收到的請求數據: {data}")  # 添加調試信息
+            logger.debug(f"收到的請求數據: {data}")  # 添加調試信息
             
             tag_name = data.get('tag_name')
             image_url = data.get('image_url')
@@ -131,7 +133,7 @@ class NarrowcastMessageView(View):
             
             # 發送 narrowcast 訊息
             result = line_service.send_narrowcast_message(tag_name, flex_message)
-            print(f"發送結果: {result}")  # 添加調試信息
+            logger.debug(f"發送結果: {result}")  # 添加調試信息
 
             return JsonResponse(result)
 
