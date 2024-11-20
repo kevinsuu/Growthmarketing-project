@@ -4,7 +4,8 @@ from .views import (
     RemoveRichMenuView,
     NarrowcastMessageView,
     TagStatsView,
-    PushMessageView
+    PushMessageView,
+    TrackMessageReadView
 )
 
 urlpatterns = [
