@@ -8,7 +8,7 @@ from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import (
     MessageEvent, PostbackEvent, TextSendMessage, 
-    FollowEvent, UnfollowEvent
+    FollowEvent, UnfollowEvent,MessageReadEvent
 )
 from django.conf import settings
 from .services import LineMessageService
@@ -62,22 +62,6 @@ class LineWebhookView(View):
             data = dict(parse_qsl(event.postback.data))
             action = data.get('action')
             user_id = event.source.user_id
-            logger.info(f"action: {action}")
-            # 追蹤按鈕點擊
-            if data.get('action') == 'read_message':
-                reply_token = event.reply_token
-                reply_message_content = {
-                    "type": "text",
-                    "text": "訊息已讀，謝謝！"
-                }
-                try:
-                    self.line_bot_api.reply_message(
-                        reply_token,
-                        TextSendMessage(text=reply_message_content["text"])
-                    )
-                except Exception as e:
-                    # 錯誤處理
-                    print(f"回覆失敗: {e}")
             click_result = self.line_service.track_message_click(user_id, action)
             
             if click_result['success']:
@@ -99,6 +83,21 @@ class LineWebhookView(View):
                 event.reply_token,
                 TextSendMessage(text=reply_message)
             )
+
+        # 處理已讀事件
+        @self._handler.add(MessageReadEvent)
+        def handle_read(event):
+            user_id = event.source.user_id
+            try:
+                # 發送已讀確認訊息
+                logger.info(f"使用者 {user_id} 已讀訊息")
+
+                line_bot_api.push_message(
+                    user_id,
+                    TextSendMessage(text="訊息已讀！")
+                )
+            except LineBotApiError as e:
+                logger.error(f"處理已讀事件時發生錯誤: {str(e)}")
 
     def post(self, request, *args, **kwargs):
         signature = request.headers.get('X-Line-Signature', '')
