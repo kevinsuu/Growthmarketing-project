@@ -199,3 +199,20 @@ class PushMessageView(View):
                 'success': False,
                 'message': str(e)
             })
+
+class TrackMessageReadView(View):
+    def get(self, request, message_id):
+        try:
+            # 從請求頭中獲取用戶 ID
+            user_id = request.headers.get('X-Line-User-ID')
+            if user_id:
+                line_service = LineMessageService()
+                line_service.track_message_impression(user_id)
+            
+            # 返回一個 1x1 的透明圖片
+            transparent_pixel = b'\x47\x49\x46\x38\x39\x61\x01\x00\x01\x00\x80\x00\x00\xff\xff\xff\x00\x00\x00\x21\xf9\x04\x01\x00\x00\x00\x00\x2c\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02\x44\x01\x00\x3b'
+            return HttpResponse(transparent_pixel, content_type='image/gif')
+            
+        except Exception as e:
+            logger.error(f"追蹤訊息已讀失敗: {str(e)}")
+            return HttpResponse(status=500)
