@@ -16,9 +16,7 @@ from urllib.parse import parse_qsl
 from django.views import View
 from django.shortcuts import render
 from .models import UserTag
-import logging
-
-logger = logging.getLogger(__name__)
+      
 @method_decorator(csrf_exempt, name='dispatch')
 class LineWebhookView(View):
     def __init__(self):
@@ -43,7 +41,6 @@ class LineWebhookView(View):
                     self.line_service.create_flex_message()
                 )
             else:
-              
                 reply_message = (
                     f"訊息已讀！\n"
                     f"時間: {impression_result['tagged_at']}\n"
@@ -56,12 +53,45 @@ class LineWebhookView(View):
                     TextSendMessage(text=reply_message)
                 )
 
-        
+        @self._handler.add(MessageEvent)
+        def handle_message(event):
+            """處理收到訊息事件"""
+            user_id = event.source.user_id
+            
+            # 記錄已讀標籤到資料庫
+            result = self.line_service.tag_user(
+                user_id,
+                'message_read'
+            )
+            print(f"已讀標籤結果: {result}")
+
+            if event.message.text.lower() == "start":
+                # 發送 Flex Message
+                self.line_bot_api.reply_message(
+                    event.reply_token,
+                    self.line_service.create_flex_message()
+                )
+            else:
+                # 回覆已讀確認訊息
+                reply_message = (
+                    f"訊息已讀！\n"
+                    f"時間: {result['tagged_at']}\n"
+                    f"用戶ID: {user_id}\n"
+                    f"標籤: message_read"
+                )
+                
+                self.line_bot_api.reply_message(
+                    event.reply_token,
+                    TextSendMessage(text=reply_message)
+                )
+
         @self._handler.add(PostbackEvent)
         def handle_postback(event):
             data = dict(parse_qsl(event.postback.data))
             action = data.get('action')
             user_id = event.source.user_id
+            
+            # 追蹤按鈕點擊
             click_result = self.line_service.track_message_click(user_id, action)
             
             if click_result['success']:
@@ -96,21 +126,14 @@ class LineWebhookView(View):
                 })
 
             line_service = LineMessageService()
-            # 使用 Narrowcast API 發送訊息
             result = line_service.send_flex_message_with_narrowcast(user_id)
             
             return JsonResponse(result)
-
-        except json.JSONDecodeError:
-            return JsonResponse({
-                'success': False,
-                'message': '無效的 JSON 格式'
-            })
+        except InvalidSignatureError:
+            return HttpResponse(status=400)
         except Exception as e:
-            return JsonResponse({
-                'success': False,
-                'message': str(e)
-            })
+            print(f"Error: {str(e)}")
+            return HttpResponse(status=500)
 
 @method_decorator(csrf_exempt, name='dispatch')
 class RemoveRichMenuView(View):
@@ -127,7 +150,7 @@ class NarrowcastMessageView(View):
     def post(self, request, *args, **kwargs):
         try:
             data = json.loads(request.body)
-            logger.info(f"收到的請求數據: {data}")  # 添加調試信息
+            print(f"收到的請求數據: {data}")  # 添加調試信息
             
             tag_name = data.get('tag_name')
             image_url = data.get('image_url')
@@ -153,9 +176,55 @@ class NarrowcastMessageView(View):
             
             # 發送 narrowcast 訊息
             result = line_service.send_narrowcast_message(tag_name, flex_message)
-            logger.info(f"發送結果: {result}")  # 添加調試信息
+            print(f"發送結果: {result}")  # 添加調試信息
 
             return JsonResponse(result)
+
+        except json.JSONDecodeError:
+            return JsonResponse({
+                'success': False,
+                'message': '無效的 JSON 格式'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': str(e)
+            })
+class TagStatsView(View):
+    def get(self, request):
+        stats, graph = UserTag.get_daily_tag_stats()
+        context = {
+            'stats': stats,
+            'graph': graph
+        }
+        return render(request, 'bot/tag_stats.html', context)
+
+@method_decorator(csrf_exempt, name='dispatch')
+class PushMessageView(View):
+    def post(self, request, *args, **kwargs):
+        try:
+            data = json.loads(request.body)
+            user_id = data.get('user_id')
+            
+            if not user_id:
+                return JsonResponse({
+                    'success': False,
+                    'message': '缺少用戶ID'
+                })
+
+            line_service = LineMessageService()
+            result = line_service.push_flex_message_to_user(user_id)
+            
+            if result:
+                return JsonResponse({
+                    'success': True,
+                    'message': f'成功推送消息給用戶 {user_id}'
+                })
+            else:
+                return JsonResponse({
+                    'success': False,
+                    'message': f'推送消息失敗'
+                })
 
         except json.JSONDecodeError:
             return JsonResponse({
