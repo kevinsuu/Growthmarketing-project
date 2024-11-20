@@ -13,6 +13,7 @@ class UserTag(models.Model):
     user_id = models.CharField(max_length=50)
     tag_name = models.CharField(max_length=100)
     tagged_at = models.DateTimeField(auto_now_add=True)
+    extra_data = models.JSONField(default=dict, blank=True)  # 新增欄位
 
     class Meta:
         db_table = 'user_tags'
