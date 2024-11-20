@@ -8,7 +8,7 @@ from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import (
     MessageEvent, PostbackEvent, TextSendMessage, 
-    FollowEvent, UnfollowEvent,MessageReadEvent
+    FollowEvent, UnfollowEvent
 )
 from django.conf import settings
 from .services import LineMessageService
