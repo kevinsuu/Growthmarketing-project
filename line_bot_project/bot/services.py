@@ -172,10 +172,7 @@ class LineMessageService:
                 "layout": "horizontal",
                 "spacing": "sm",
                 "contents": [
-                    {
-                    "type": "button",
-                    "style": "link",
-                 
+                   
                     {
                         "type": "button",
                         "style": "primary",
