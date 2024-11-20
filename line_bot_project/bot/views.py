@@ -66,14 +66,14 @@ class LineWebhookView(View):
             
             if click_result['success']:
                 reply_message = (
-                    f"操作記錄成功！\n"
+                    f"點擊活動成功\n"
                     f"時間: {click_result['tagged_at']}\n"
                     f"用戶ID: {user_id}\n"
                     f"動作: {action}"
                 )
             else:
                 reply_message = (
-                    f"操作記錄失敗\n"
+                    f"點擊活動成功\n"
                     f"用戶ID: {user_id}\n"
                     f"動作: {action}\n"
                     f"錯誤: {click_result['message']}"

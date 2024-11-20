@@ -124,7 +124,6 @@ class LineMessageService:
     def track_message_click(self, user_id, action):
         """追蹤訊息點擊"""
         try:
-            # 直接記錄到資料庫，不再依賴 LINE API 的回應
             result = self.tag_user(user_id, f'clicked_{action}')
             if result['success']:
                 return {
@@ -173,6 +172,15 @@ class LineMessageService:
                 "layout": "horizontal",
                 "spacing": "sm",
                 "contents": [
+                    {
+                    "type": "button",
+                    "style": "link",
+                    "action": {
+                        "type": "postback",
+                        "label": "我已閱讀",
+                        "data": "action=read_confirm"
+                        }
+                    },
                     {
                         "type": "button",
                         "style": "primary",
