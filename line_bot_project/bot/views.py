@@ -37,27 +37,10 @@ class LineWebhookView(View):
             # 追蹤訊息已讀
             impression_result = self.line_service.track_message_impression(user_id)
             
-            logger.info(f"用戶 {user_id} 已讀訊息，標籤結果: {impression_result}")
-            logger.info(f"event.message.text: {event.message.text}")
             if event.message.text.lower() == "start":
                 self.line_bot_api.reply_message(
                     event.reply_token,
                     self.line_service.create_flex_message()
-                )
-                read_message = TextSendMessage(text=(
-                    f"訊息已讀！\n"
-                    f"時間: {impression_result['tagged_at']}\n"
-                    f"用戶ID: {user_id}\n"
-                    f"標籤: message_impression"
-                ))
-                
-                result = self.line_service.tag_user(
-                    user_id,
-                    'user_read1120'  # 使用指定的標籤
-                )
-                self.line_service.send_narrowcast_message(
-                    'user_read1120',  # 使用剛才標記的標籤
-                    read_message
                 )
             else:
               
@@ -73,13 +56,28 @@ class LineWebhookView(View):
                     TextSendMessage(text=reply_message)
                 )
 
+        
         @self._handler.add(PostbackEvent)
         def handle_postback(event):
             data = dict(parse_qsl(event.postback.data))
             action = data.get('action')
             user_id = event.source.user_id
-            
+            logger.info(f"action: {action}")
             # 追蹤按鈕點擊
+            if data.get('action') == 'read_message':
+                reply_token = event.reply_token
+                reply_message_content = {
+                    "type": "text",
+                    "text": "訊息已讀，謝謝！"
+                }
+                try:
+                    self.line_bot_api.reply_message(
+                        reply_token,
+                        TextSendMessage(text=reply_message_content["text"])
+                    )
+                except Exception as e:
+                    # 錯誤處理
+                    print(f"回覆失敗: {e}")
             click_result = self.line_service.track_message_click(user_id, action)
             
             if click_result['success']:
