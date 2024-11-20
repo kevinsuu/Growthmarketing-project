@@ -175,12 +175,7 @@ class LineMessageService:
                     {
                     "type": "button",
                     "style": "link",
-                    "action": {
-                        "type": "postback",
-                        "label": "我已閱讀",
-                        "data": "action=read_confirm"
-                        }
-                    },
+                 
                     {
                         "type": "button",
                         "style": "primary",
