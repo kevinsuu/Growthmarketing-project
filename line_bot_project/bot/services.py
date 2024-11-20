@@ -35,14 +35,6 @@ class LineMessageService:
                         "wrap": True,
                         "weight": "bold",
                         "size": "xl"
-                    },
-                    {
-                        # 添加一個 1x1 像素的追蹤圖片
-                        "type": "image",
-                        "url": f"https://www.google.com/images/branding/googlelogo/1x/googlelogo_color_272x92dp.png",
-                        "size": "xxs",
-                        "aspectRatio": "1:1",
-                        "aspectMode": "cover"
                     }
                 ]
             },
@@ -98,15 +90,10 @@ class LineMessageService:
         try:
             flex_message = self.create_flex_message()
             self.line_bot_api.push_message(user_id, flex_message)
-            return {
-                'success': True,
-                'message': '訊息已推送'
-            }
+            return True
         except Exception as e:
-            return {
-                'success': False,
-                'message': f'推送失敗: {str(e)}'
-            }   
+            print(f"推送失敗: {str(e)}")
+            return False
     def create_audience_group(self, description):
         """創建受眾群組"""
         url = f"{self.api_endpoint}/create"
@@ -133,6 +120,7 @@ class LineMessageService:
     def track_message_impression(self, user_id):
         """追蹤訊息已讀"""
         try:
+            # 直接記錄到資料庫，不再依賴 LINE API 的回應
             result = self.tag_user(user_id, 'message_impression')
             if result['success']:
                 return {
