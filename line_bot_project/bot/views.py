@@ -8,7 +8,7 @@ from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import (
     MessageEvent, PostbackEvent, TextSendMessage, 
-    FollowEvent, UnfollowEvent,MessageReadEvent
+    FollowEvent, UnfollowEvent
 )
 from django.conf import settings
 from .services import LineMessageService
@@ -85,7 +85,7 @@ class LineWebhookView(View):
             )
 
         # 處理已讀事件
-        @self._handler.add(MessageReadEvent)
+        @self._handler.add(MessageEvent)
         def handle_read(event):
             user_id = event.source.user_id
             try:
@@ -127,47 +127,70 @@ class NarrowcastMessageView(View):
     def post(self, request, *args, **kwargs):
         try:
             data = json.loads(request.body)
-            logger.info(f"收到的請求數據: {data}")  # 添加調試信息
+            user_id = data.get('user_id')
+            message_type = data.get('message_type', 'text')
             
-            tag_name = data.get('tag_name')
-            image_url = data.get('image_url')
-            description = data.get('description')
-            button1_label = data.get('button1_label')
-            button2_label = data.get('button2_label')
-
-            if not all([tag_name, image_url, description, button1_label, button2_label]):
-                return JsonResponse({
-                    'success': False,
-                    'message': '缺少必要參數'
-                })
-
             line_service = LineMessageService()
             
-            # 創建自定義 Flex Message
-            flex_message = line_service.create_custom_flex_message(
-                image_url=image_url,
-                description=description,
-                button1_label=button1_label,
-                button2_label=button2_label
-            )
+            # 建立訊息
+            if message_type == 'flex':
+                message = line_service.create_flex_message()
+            else:
+                message = TextSendMessage(text="這是一條測試訊息")
             
-            # 發送 narrowcast 訊息
-            result = line_service.send_narrowcast_message(tag_name, flex_message)
-            logger.info(f"發送結果: {result}")  # 添加調試信息
-
-            return JsonResponse(result)
-
-        except json.JSONDecodeError:
-            return JsonResponse({
-                'success': False,
-                'message': '無效的 JSON 格式'
-            })
+            # 發送訊息並追蹤
+            result = line_service.send_message_and_track_read(user_id, message)
+            
+            if result['success']:
+                # 等待一段時間後檢查訊息狀態
+                time.sleep(5)  # 等待 5 秒
+                status = line_service.track_message_status(result['request_id'])
+                
+                return JsonResponse({
+                    'success': True,
+                    'message': '訊息發送成功',
+                    'delivery_status': status
+                })
+            else:
+                return JsonResponse({
+                    'success': False,
+                    'message': f"發送失敗: {result.get('error')}"
+                })
+                
         except Exception as e:
+            logger.error(f"處理請求時發生錯誤: {str(e)}")
             return JsonResponse({
                 'success': False,
                 'message': str(e)
             })
-class TagStatsView(View):
+
+# 新增一個檢查訊息狀態的端點
+@method_decorator(csrf_exempt, name='dispatch')
+class MessageStatusView(View):
+    def post(self, request, *args, **kwargs):
+        try:
+            data = json.loads(request.body)
+            request_id = data.get('request_id')
+            
+            if not request_id:
+                return JsonResponse({
+                    'success': False,
+                    'message': '缺少 request_id'
+                })
+                
+            line_service = LineMessageService()
+            status = line_service.track_message_status(request_id)
+            
+            return JsonResponse({
+                'success': True,
+                'status': status
+            })
+            
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': str(e)
+            })class TagStatsView(View):
     def get(self, request):
         stats, graph = UserTag.get_daily_tag_stats()
         context = {
