@@ -241,9 +241,8 @@ class LineMessageService:
                 batch_users = users[i:i + batch_size]
                 try:
                     self.line_bot_api.multicast(
-                        batch_users,
-                        flex_message,
-                        notification=True,
+                        to=batch_users,
+                        messages=flex_message,
                         retry_key=tracking_id
                     )
                     success_count += len(batch_users)
@@ -260,7 +259,6 @@ class LineMessageService:
                 except Exception as e:
                     failed_count += len(batch_users)
                     logger.error(f"批次發送失敗: {str(e)}")
-
             logger.info(f"發送完成: 成功 {success_count} 人, 失敗 {failed_count} 人")
             return {
                 'success': True,
