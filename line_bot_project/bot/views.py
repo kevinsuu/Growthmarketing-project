@@ -17,6 +17,8 @@ from django.views import View
 from django.shortcuts import render
 from .models import UserTag
       
+
+
 @method_decorator(csrf_exempt, name='dispatch')
 class LineWebhookView(View):
     def __init__(self):
@@ -32,39 +34,13 @@ class LineWebhookView(View):
             """處理收到訊息事件"""
             user_id = event.source.user_id
             
-            # 追蹤訊息已讀
-            impression_result = self.line_service.track_message_impression(user_id)
-            print(f"impression_result: {impression_result}")
-            if event.message.text.lower() == "start":
-                self.line_bot_api.reply_message(
-                    event.reply_token,
-                    self.line_service.create_flex_message()
-                )
-            else:
-                reply_message = (
-                    f"訊息已讀！\n"
-                    f"時間: {result['tagged_at']}\n"
-                    f"用戶ID: {user_id}\n"
-                    f"標籤: user_read1120"  # 修改標籤名稱
-                )
-                
-                self.line_bot_api.reply_message(
-                    event.reply_token,
-                    TextSendMessage(text=reply_message)
-                )
-
-        @self._handler.add(MessageEvent)
-        def handle_message(event):
-            """處理收到訊息事件"""
-            user_id = event.source.user_id
-            
             # 記錄已讀標籤到資料庫
             result = self.line_service.tag_user(
                 user_id,
                 'message_read'
             )
             print(f"已讀標籤結果: {result}")
-
+            print(f"event.message.text: {event.message.text}")
             if event.message.text.lower() == "start":
                 # 發送 Flex Message
                 self.line_bot_api.reply_message(
@@ -113,19 +89,6 @@ class LineWebhookView(View):
                 event.reply_token,
                 TextSendMessage(text=reply_message)
             )
-
-    def post(self, request, *args, **kwargs):
-        signature = request.headers.get('X-Line-Signature', '')
-        body = request.body.decode('utf-8')
-        
-        try:
-            self._handler.handle(body, signature)
-            return HttpResponse(status=200)
-        except InvalidSignatureError:
-            return HttpResponse(status=400)
-        except Exception as e:
-            print(f"Error: {str(e)}")
-            return HttpResponse(status=500)
 
 @method_decorator(csrf_exempt, name='dispatch')
 class RemoveRichMenuView(View):
