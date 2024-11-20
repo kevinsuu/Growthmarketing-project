@@ -36,16 +36,28 @@ class LineWebhookView(View):
             
             # 追蹤訊息已讀
             impression_result = self.line_service.track_message_impression(user_id)
-            result = self.line_service.tag_user(
-                user_id,
-                'user_read1120'  # 使用指定的標籤
-            )
-            logger.info(f"用戶 {user_id} 已讀訊息，標籤結果: {result}")
-
+            
+            logger.info(f"用戶 {user_id} 已讀訊息，標籤結果: {impression_result}")
+            logger.info(f"event.message.text: {event.message.text}")
             if event.message.text.lower() == "start":
                 self.line_bot_api.reply_message(
                     event.reply_token,
                     self.line_service.create_flex_message()
+                )
+                read_message = TextSendMessage(text=(
+                    f"訊息已讀！\n"
+                    f"時間: {impression_result['tagged_at']}\n"
+                    f"用戶ID: {user_id}\n"
+                    f"標籤: message_impression"
+                ))
+                
+                result = self.line_service.tag_user(
+                    user_id,
+                    'user_read1120'  # 使用指定的標籤
+                )
+                self.line_service.send_narrowcast_message(
+                    'user_read1120',  # 使用剛才標記的標籤
+                    read_message
                 )
             else:
               
