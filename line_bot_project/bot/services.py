@@ -199,7 +199,15 @@ class LineMessageService:
     def send_narrowcast_message(self, tag_name, flex_message=None):
         """發送針對性訊息並追蹤已讀狀態"""
         try:
-            if flex_message is None:
+            # 如果提供了自定義參數，使用 create_custom_flex_message
+            if isinstance(flex_message, dict) and all(key in flex_message for key in ['image_url', 'description', 'button1_label', 'button2_label']):
+                flex_message = self.create_custom_flex_message(
+                    image_url=flex_message['image_url'],
+                    description=flex_message['description'],
+                    button1_label=flex_message['button1_label'],
+                    button2_label=flex_message['button2_label']
+                )
+            elif flex_message is None:
                 flex_message = self.create_flex_message()
 
             # 生成唯一的追蹤 ID
@@ -218,6 +226,7 @@ class LineMessageService:
             ).values_list('user_id', flat=True).distinct())
 
             if not users:
+                logger.warning(f"找不到標籤 {tag_name} 的用戶")
                 return {
                     'success': False,
                     'message': f'找不到標籤 {tag_name} 的用戶'
@@ -231,26 +240,28 @@ class LineMessageService:
             for i in range(0, len(users), batch_size):
                 batch_users = users[i:i + batch_size]
                 try:
-                    response = self.line_bot_api.multicast(
+                    self.line_bot_api.multicast(
                         batch_users,
                         flex_message,
-                        notification=True,  # 確保會顯示通知
-                        retry_key=tracking_id  # 使用追蹤 ID 作為重試鍵值
+                        notification=True,
+                        retry_key=tracking_id
                     )
                     success_count += len(batch_users)
                     
                     # 記錄發送成功的用戶
-                    for user_id in batch_users:
-                        UserTag.objects.create(
+                    UserTag.objects.bulk_create([
+                        UserTag(
                             user_id=user_id,
                             tag_name=f'message_sent_{tracking_id}',
                             extra_data={'status': 'delivered'}
-                        )
+                        ) for user_id in batch_users
+                    ])
                         
                 except Exception as e:
                     failed_count += len(batch_users)
-                    (f"批次發送失敗: {str(e)}")
+                    logger.error(f"批次發送失敗: {str(e)}")
 
+            logger.info(f"發送完成: 成功 {success_count} 人, 失敗 {failed_count} 人")
             return {
                 'success': True,
                 'tracking_id': tracking_id,
@@ -258,11 +269,11 @@ class LineMessageService:
             }
 
         except Exception as e:
+            logger.error(f"發送錯誤: {str(e)}")
             return {
                 'success': False,
                 'message': f'發送錯誤: {str(e)}'
             }
-
     def track_message_impression(self, user_id):
         """追蹤訊息已讀"""
         try:
