@@ -34,7 +34,7 @@ class LineWebhookView(View):
             
             # 追蹤訊息已讀
             impression_result = self.line_service.track_message_impression(user_id)
-            
+            print(f"impression_result: {impression_result}")
             if event.message.text.lower() == "start":
                 self.line_bot_api.reply_message(
                     event.reply_token,
@@ -43,9 +43,9 @@ class LineWebhookView(View):
             else:
                 reply_message = (
                     f"訊息已讀！\n"
-                    f"時間: {impression_result['tagged_at']}\n"
+                    f"時間: {result['tagged_at']}\n"
                     f"用戶ID: {user_id}\n"
-                    f"標籤: message_impression"
+                    f"標籤: user_read1120"  # 修改標籤名稱
                 )
                 
                 self.line_bot_api.reply_message(
