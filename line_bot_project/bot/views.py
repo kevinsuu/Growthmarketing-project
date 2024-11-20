@@ -115,20 +115,12 @@ class LineWebhookView(View):
             )
 
     def post(self, request, *args, **kwargs):
+        signature = request.headers.get('X-Line-Signature', '')
+        body = request.body.decode('utf-8')
+        
         try:
-            data = json.loads(request.body)
-            user_id = data.get('user_id')
-            
-            if not user_id:
-                return JsonResponse({
-                    'success': False,
-                    'message': '缺少用戶ID'
-                })
-
-            line_service = LineMessageService()
-            result = line_service.send_flex_message_with_narrowcast(user_id)
-            
-            return JsonResponse(result)
+            self._handler.handle(body, signature)
+            return HttpResponse(status=200)
         except InvalidSignatureError:
             return HttpResponse(status=400)
         except Exception as e:
@@ -231,38 +223,6 @@ class PushMessageView(View):
                 'success': False,
                 'message': '無效的 JSON 格式'
             })
-        except Exception as e:
-            return JsonResponse({
-                'success': False,
-                'message': str(e)
-            })
-@method_decorator(csrf_exempt, name='dispatch')
-class NarrowcastStatusView(View):
-    def post(self, request, *args, **kwargs):
-        try:
-            data = json.loads(request.body)
-            request_id = data.get('request_id')
-            audience_group_id = data.get('audience_group_id')
-            
-            if not request_id or not audience_group_id:
-                return JsonResponse({
-                    'success': False,
-                    'message': '缺少必要參數'
-                })
-
-            line_service = LineMessageService()
-            
-            # 查詢發送狀態
-            message_status = line_service.get_narrowcast_status(request_id)
-            # 查詢受眾群組狀態
-            audience_status = line_service.get_audience_group_status(audience_group_id)
-            
-            return JsonResponse({
-                'success': True,
-                'message_status': message_status,
-                'audience_status': audience_status
-            })
-
         except Exception as e:
             return JsonResponse({
                 'success': False,
