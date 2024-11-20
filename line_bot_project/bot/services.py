@@ -4,8 +4,11 @@ from django.conf import settings
 import requests
 import uuid
 from datetime import datetime
-
+import logging
 from .models import UserTag
+
+logger = logging.getLogger(__name__)
+
 class LineMessageService:
     def __init__(self):
         self.line_bot_api = LineBotApi(settings.LINE_CHANNEL_ACCESS_TOKEN)
@@ -92,7 +95,7 @@ class LineMessageService:
             self.line_bot_api.push_message(user_id, flex_message)
             return True
         except Exception as e:
-            print(f"推送失敗: {str(e)}")
+            logger.error(f"推送失敗: {str(e)}")
             return False
     def create_audience_group(self, description):
         """創建受眾群組"""
@@ -246,7 +249,7 @@ class LineMessageService:
                         
                 except Exception as e:
                     failed_count += len(batch_users)
-                    print(f"批次發送失敗: {str(e)}")
+                    (f"批次發送失敗: {str(e)}")
 
             return {
                 'success': True,
