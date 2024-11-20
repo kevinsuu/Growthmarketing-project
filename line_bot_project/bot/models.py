@@ -88,3 +88,18 @@ class UserTag(models.Model):
         except Exception as e:
             print(f"Error generating stats: {str(e)}")
             return [], None
+
+    @classmethod
+    def update_message_status(cls, tracking_id, user_id, new_status):
+        """更新訊息狀態"""
+        try:
+            message = cls.objects.get(
+                user_id=user_id,
+                tag_name=f'message_sent_{tracking_id}',
+                extra_data__status='delivered'
+            )
+            message.extra_data['status'] = new_status
+            message.save()
+            return True
+        except cls.DoesNotExist:
+            return False
