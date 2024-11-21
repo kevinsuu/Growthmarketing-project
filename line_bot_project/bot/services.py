@@ -436,15 +436,18 @@ class LineMessageService:
                 # 確保使用 get() 方法時提供預設值 0
                 total_sent = insight_data.get("overview", {}).get("delivered", 0) or 0
                 read_count = insight_data.get("message", {}).get("impression", 0) or 0
+                if total_sent == 0:
+                    return {
+                        'success': True,
+                        'statistics': {
+                            'tracking_id': tracking_id,
+                            'message': '等待 LINE 更新數據中...',
+                            'status': 'pending'
+                        }
+                    }
             else:
                 logger.warning(f"無法從 Insight API 獲取數據: {response.text}")
-                return {
-                    'success': True,
-                    'statistics': {
-                        'tracking_id': tracking_id,
-                        'message':'等待 LINE API 更新..'
-                    }
-                }
+                
             # 確保數值為整數並計算比率
             total_sent = int(total_sent)
             read_count = int(read_count)
