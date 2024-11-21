@@ -101,11 +101,17 @@ class LineMessageService:
             logger.info(f"準備發送給用戶: {users[:500]}")
 
             # 使用 LineBotApi 發送 narrowcast
-            response = self.line_bot_api.narrowcast(
-                messages=[TextSendMessage(text="test message")],
-                recipient={
+            response = self.line_bot_api.push_narrowcast({
+                "messages": [
+                    {
+                        "type": "text",
+                        "text": "Hello, targeted audience!"
+                    }
+                ],
+                "recipient":{
                     "type": "user_id",
                     "userIds": users[:500]  # LINE 限制最多 500 個用戶
+                    }
                 }
             )
 
