@@ -184,7 +184,7 @@ class LineMessageService:
                 request_id = response.headers.get('x-line-request-id', str(uuid.uuid4()))
                 logger.info(f"Narrowcast 發送成功，Request ID: {request_id}")
                 user_tag = UserTag.objects.create(
-                    user_id='narrowcast_message',
+                    user_id=,
                     tag_name=f'message_sent_{request_id}',
                     extra_data={'status': 'sent'}
                 )
