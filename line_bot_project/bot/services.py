@@ -155,17 +155,9 @@ class LineMessageService:
             url = "https://api.line.me/v2/bot/message/narrowcast"
             payload = {
                 "messages": [flex_content],
-                "recipient": {
-                    "type": "operator",
-                    "and": [
-                        {
-                            "type": "audience",
-                            "audienceGroupId": 9363359654509
-                        }
-                    ]
-                }
+                "to": users[:500]
             }
-            logger.info(f"Audience group ID: {audience_group_id}")
+            
             if audience_group_id:
                 payload["recipient"] = {
                     "type": "audience_group",
