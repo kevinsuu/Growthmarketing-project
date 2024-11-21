@@ -428,11 +428,22 @@ class LineMessageService:
     
 
             # 計算總發送數
-            total_sent = insight_data.get("overview", {}).get("delivered", 0)
-            read_count = insight_data.get("message", {}).get("impression", 0)
-            # 計算轉換率
+            total_sent = 0
+            read_count = 0
+
+            if response.status_code == 200:
+                insight_data = response.json()
+                # 確保使用 get() 方法時提供預設值 0
+                total_sent = insight_data.get("overview", {}).get("delivered", 0) or 0
+                read_count = insight_data.get("message", {}).get("impression", 0) or 0
+            else:
+                logger.warning(f"無法從 Insight API 獲取數據: {response.text}")
+                
+            # 確保數值為整數並計算比率
+            total_sent = int(total_sent)
+            read_count = int(read_count)
             read_rate = (read_count / total_sent * 100) if total_sent > 0 else 0
-            
+
 
             return {
                 'success': True,
