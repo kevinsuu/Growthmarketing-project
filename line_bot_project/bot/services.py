@@ -71,7 +71,7 @@ class LineMessageService:
             }
         }
         return FlexSendMessage(alt_text='互動訊息', contents=flex_message_json)
-    def get_message_statistics(self, tracking_id):
+    def get_message_statistics(self, request_id):
         """透過 LINE API 獲取訊息統計數據"""
         try:
             # 構建請求 URL
@@ -79,7 +79,7 @@ class LineMessageService:
             
             # 設置查詢參數
             params = {
-                "requestId": tracking_id
+                "requestId": request_id
             }
             
             # 發送 GET 請求
@@ -93,7 +93,7 @@ class LineMessageService:
                 data = response.json()
                 return {
                     'success': True,
-                    'tracking_id': tracking_id,
+                    'request_id': request_id,
                     'statistics': {
                         'impression': data.get('impression', 0),  # 已讀數
                         'click': data.get('click', 0),  # 點擊數
@@ -276,15 +276,6 @@ class LineMessageService:
             elif flex_message is None:
                 flex_message = self.create_flex_message()
 
-            # 生成唯一的追蹤 ID
-            tracking_id = str(uuid.uuid4())
-            
-            # 在發送訊息前，先記錄這個追蹤 ID
-            UserTag.objects.create(
-                user_id='system',
-                tag_name=f'message_{tracking_id}',
-                extra_data={'status': 'sent'}
-            )
 
             # 從資料庫獲取目標用戶
             users = list(UserTag.objects.filter(
@@ -297,40 +288,49 @@ class LineMessageService:
                     'success': False,
                     'message': f'找不到標籤 {tag_name} 的用戶'
                 }
-
-            # 分批發送
-            batch_size = 500
-            success_count = 0
-            failed_count = 0
-
-            for i in range(0, len(users), batch_size):
-                batch_users = users[i:i + batch_size]
-                try:
-                    self.line_bot_api.multicast(
-                        to=batch_users,
-                        messages=flex_message,
-                        retry_key=tracking_id
-                    )
-                    success_count += len(batch_users)
-                    
-                    # 記錄發送成功的用戶
-                    UserTag.objects.bulk_create([
-                        UserTag(
-                            user_id=user_id,
-                            tag_name=f'message_sent_{tracking_id}',
-                            extra_data={'status': 'delivered'}
-                        ) for user_id in batch_users
-                    ])
-                        
-                except Exception as e:
-                    failed_count += len(batch_users)
-                    logger.error(f"批次發送失敗: {str(e)}")
-            logger.info(f"發送完成: 成功 {success_count} 人, 失敗 {failed_count} 人")
-            return {
-                'success': True,
-                'tracking_id': tracking_id,
-                'message': f'發送完成: 成功 {success_count} 人, 失敗 {failed_count} 人'
+            
+            url = "https://api.line.me/v2/bot/message/narrowcast"
+            payload = {
+                "messages": [flex_message.as_json_dict()],
+                "recipient": {
+                    "type": "user_id_list",
+                    "audience": {
+                        "userIds": users
+                    }
+                }
             }
+
+            # 發送 narrowcast 請求
+            response = requests.post(url, headers=self.headers, json=payload)
+            
+            if response.status_code == 200:
+                request_id = response.headers.get('X-Line-Request-Id')
+                logger.info(f"Narrowcast 發送成功，Request ID: {request_id}")
+                
+                # 記錄發送狀態
+                UserTag.objects.create(
+                    user_id='system',
+                    tag_name=f'message_{request_id}',
+                    extra_data={
+                        'status': 'sent',
+                        'target_tag': tag_name,
+                        'user_count': len(users)
+                    }
+                )
+                
+                return {
+                    'success': True,
+                    'request_id': request_id,
+                    'message': f'訊息已發送給 {len(users)} 位用戶'
+                }
+            else:
+                logger.error(f"Narrowcast 發送失敗: {response.text}")
+                return {
+                    'success': False,
+                    'message': f'發送失敗: {response.text}'
+                }
+
+
 
         except Exception as e:
             logger.error(f"發送錯誤: {str(e)}")
