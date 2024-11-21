@@ -266,7 +266,7 @@ class LineMessageService:
             # 檢查是否有未標記已讀的訊息
             logger.info(f"user_id: {user_id}")
             recent_messages = UserTag.objects.filter(
-                user_id=user_id,
+                user_id='narrowcast_message',
                 tag_name__startswith='message_sent_',
                 extra_data__status='sent'
             ).order_by('-tagged_at')[:5]  # 只檢查最近的5條訊息
