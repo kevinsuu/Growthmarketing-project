@@ -135,7 +135,12 @@ class LineMessageService:
                     "altText": "互動訊息",
                     "contents": self.create_flex_message().contents
                 }
-
+            AudienceResponse = self.line_bot_api.get_audience_groups(
+                page=1,
+                description="",
+                status="READY"
+            )
+            logger.info(f"Audience groups: {AudienceResponse}")
             # 從資料庫獲取目標用戶
             users = list(UserTag.objects.filter(
                 tag_name=tag_name
