@@ -148,7 +148,7 @@ class NarrowcastMessageView(View):
             })
             
             # 發送 narrowcast 訊息
-            result = line_service.send_narrowcast_message(tag_name, data)
+            # result = line_service.send_narrowcast_message(tag_name, data)
 
             print(f"發送結果: {result}")  # 添加調試信息
 
