@@ -154,10 +154,7 @@ class LineMessageService:
             url = "https://api.line.me/v2/bot/message/narrowcast"
             payload = {
                 "messages": [flex_content],
-                "recipient": {
-                    "type": "user_id",
-                    "userIds": users[:500]  # LINE 限制最多 500 個用戶
-                }
+                "to": users[:500],  # LINE 限制最多 500 個用戶
             }
 
             # 發送請求
