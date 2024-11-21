@@ -80,7 +80,7 @@ class LineMessageService:
             if response.status_code == 200:
                 group_info = response.json()
                 logger.info(f"Audience group info: {group_info}")
-                return group_info.get('audienceCount', 0)
+                return group_info.get('audienceGroup', {}).get('audienceCount', 0)
             return 0
         except Exception as e:
             logger.error(f"獲取受眾群組數量失敗: {str(e)}")
