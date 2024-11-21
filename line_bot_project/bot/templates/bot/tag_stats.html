@@ -60,6 +60,7 @@
                         <th class="chinese-text">用戶ID</th>
                         <th class="chinese-text">標籤類型</th>
                         <th class="chinese-text">標籤數量</th>
+                        <th class="chinese-text">狀態</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -69,6 +70,7 @@
                         <td>{{ stat.user_id }}</td>
                         <td class="chinese-text">{{ stat.tag_name }}</td>
                         <td>{{ stat.tag_count }}</td>
+                        <td class="chinese-text">{{ stat.extra_data.status }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
