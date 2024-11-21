@@ -414,25 +414,10 @@ class LineMessageService:
                 headers=self.headers,
                 params=params
             )
-
-            # 計算總發送數
-            total_sent = 0
             read_count = 0
+
             if response.status_code == 200:
                 insight_data = response.json()
-                overview = insight_data.get("overview", {})
-                delivered = overview.get("delivered")
-                total_sent = int(delivered) if delivered is not None else 0
-                
-                if total_sent == 0:
-                    return {
-                        'success': True,
-                        'statistics': {
-                            'tracking_id': tracking_id,
-                            'message': '等待 LINE 更新數據中...',
-                            'status': 'pending'
-                        }
-                    }
                 read_count = insight_data.get("overview", {}).get("uniqueImpression", 0)
                 if read_count == 0:
                     button1_count = UserTag.objects.filter(
@@ -455,6 +440,27 @@ class LineMessageService:
                     tag_name=f'message_read_{tracking_id}'
                 ).count()
 
+    
+
+            # 計算總發送數
+            total_sent = 0
+
+            if response.status_code == 200:
+                insight_data = response.json()
+                total_sent = insight_data.get("overview", {}).get("delivered", 0) or 0
+                read_count = insight_data.get("message", {}).get("impression", 0) or 0
+                if total_sent == 0:
+                    return {
+                        'success': True,
+                        'statistics': {
+                            'tracking_id': tracking_id,
+                            'message': '等待 LINE 更新數據中...',
+                            'status': 'pending'
+                        }
+                    }
+            else:
+                logger.warning(f"無法從 Insight API 獲取數據: {response.text}")
+                
             # 確保數值為整數並計算比率
             total_sent = int(total_sent)
             read_count = int(read_count)
