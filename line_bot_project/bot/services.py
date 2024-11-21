@@ -288,57 +288,28 @@ class LineMessageService:
                     'success': False,
                     'message': f'找不到標籤 {tag_name} 的用戶'
                 }
-            
-            url = "https://api.line.me/v2/bot/message/narrowcast"
-            payload = {
-                "messages": [flex_message.as_json_dict()],
-                "recipient": {
-                    "type": "operator_id",
-                    "and": [
-                        {
-                            "type": "user_id",
-                            "userIds": users[:500]
-                        }
-                    ]
-                }
+                
+        response = self.line_bot_api.narrowcast(
+            messages=flex_message,
+            recipient={"type": "user_id", "userIds": users[:500]}
+        )
+        request_id = response.request_id
+        logger.info(f"Narrowcast 發送成功，Request ID: {request_id}")
+        
+        UserTag.objects.create(
+            user_id='system',
+            tag_name=f'message_{request_id}',
+            extra_data={
+                'status': 'sent',
+                'target_tag': tag_name,
+                'user_count': len(users)
             }
-
-            # 添加調試日誌
-            logger.info(f"Narrowcast payload: {json.dumps(payload, indent=2)}")
-
-            # 發送 narrowcast 請求
-            response = requests.post(url, headers=self.headers, json=payload)
-            
-            # 添加調試日誌
-            logger.info(f"Response status: {response.status_code}")
-            logger.info(f"Response headers: {dict(response.headers)}")
-            logger.info(f"Response body: {response.text}")
-            if response.status_code == 200:
-                request_id = response.headers.get('X-Line-Request-Id')
-                logger.info(f"Narrowcast 發送成功，Request ID: {request_id}")
-                
-                # 記錄發送狀態
-                UserTag.objects.create(
-                    user_id='system',
-                    tag_name=f'message_{request_id}',
-                    extra_data={
-                        'status': 'sent',
-                        'target_tag': tag_name,
-                        'user_count': len(users)
-                    }
-                )
-                
-                return {
-                    'success': True,
-                    'request_id': request_id,
-                    'message': f'訊息已發送給 {len(users)} 位用戶'
-                }
-            else:
-                logger.error(f"Narrowcast 發送失敗: {response.text}")
-                return {
-                    'success': False,
-                    'message': f'發送失敗: {response.text}'
-                }
+        )
+        return {
+            'success': True,
+            'request_id': request_id,
+            'message': f'訊息已發送給 {len(users)} 位用戶'
+        }
 
 
 
