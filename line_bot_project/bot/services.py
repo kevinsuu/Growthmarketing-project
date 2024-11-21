@@ -99,7 +99,7 @@ class LineMessageService:
                 "messages": [
                 {
                     "type": "imagemap",
-                    "baseUrl": "https://www.google.com/images/branding/googlelogo/1x/googlelogo_color_272x92dp.png",
+                    "baseUrl": "https://example.com/images/sample",
                     "altText": "點擊圖片跳轉到 Google",
                     "baseSize": {
                         "width": 1040,
