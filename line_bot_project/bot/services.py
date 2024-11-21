@@ -289,27 +289,27 @@ class LineMessageService:
                     'message': f'找不到標籤 {tag_name} 的用戶'
                 }
                 
-        response = self.line_bot_api.narrowcast(
-            messages=flex_message,
-            recipient={"type": "user_id", "userIds": users[:500]}
-        )
-        request_id = response.request_id
-        logger.info(f"Narrowcast 發送成功，Request ID: {request_id}")
-        
-        UserTag.objects.create(
-            user_id='system',
-            tag_name=f'message_{request_id}',
-            extra_data={
-                'status': 'sent',
-                'target_tag': tag_name,
-                'user_count': len(users)
+            response = self.line_bot_api.narrowcast(
+                messages=flex_message,
+                recipient={"type": "user_id", "userIds": users[:500]}
+            )
+            request_id = response.request_id
+            logger.info(f"Narrowcast 發送成功，Request ID: {request_id}")
+            
+            UserTag.objects.create(
+                user_id='system',
+                tag_name=f'message_{request_id}',
+                extra_data={
+                    'status': 'sent',
+                    'target_tag': tag_name,
+                    'user_count': len(users)
+                }
+            )
+            return {
+                'success': True,
+                'request_id': request_id,
+                'message': f'訊息已發送給 {len(users)} 位用戶'
             }
-        )
-        return {
-            'success': True,
-            'request_id': request_id,
-            'message': f'訊息已發送給 {len(users)} 位用戶'
-        }
 
 
 
