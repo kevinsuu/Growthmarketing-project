@@ -6,6 +6,7 @@ import uuid
 from datetime import datetime
 import logging
 from .models import UserTag
+from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
 
@@ -17,6 +18,8 @@ class LineMessageService:
             "Authorization": f"Bearer {settings.LINE_CHANNEL_ACCESS_TOKEN}",
             "Content-Type": "application/json"
         }
+        self.statistics_endpoint = "https://api.line.me/v2/bot/insight/message/event"
+
     def create_flex_message(self):
         """創建 Flex Message"""
         flex_message_json = {
@@ -68,7 +71,49 @@ class LineMessageService:
             }
         }
         return FlexSendMessage(alt_text='互動訊息', contents=flex_message_json)
+    def get_message_statistics(self, tracking_id):
+        """透過 LINE API 獲取訊息統計數據"""
+        try:
+            # 構建請求 URL
+            url = f"{self.statistics_endpoint}"
+            
+            # 設置查詢參數
+            params = {
+                "requestId": tracking_id
+            }
+            
+            # 發送 GET 請求
+            response = requests.get(
+                url,
+                headers=self.headers,
+                params=params
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                return {
+                    'success': True,
+                    'tracking_id': tracking_id,
+                    'statistics': {
+                        'impression': data.get('impression', 0),  # 已讀數
+                        'click': data.get('click', 0),  # 點擊數
+                        'unique_impression': data.get('uniqueImpression', 0),  # 不重複已讀數
+                        'unique_click': data.get('uniqueClick', 0),  # 不重複點擊數
+                        'message_status': data.get('status', 'unknown')  # 訊息狀態
+                    }
+                }
+            else:
+                return {
+                    'success': False,
+                    'message': f'API 請求失敗: {response.status_code}',
+                    'detail': response.text
+                }
 
+        except Exception as e:
+            return {
+                'success': False,
+                'message': f'獲取統計數據失敗: {str(e)}'
+            }
     def tag_user(self, user_id, tag_name):
         """為用戶添加標籤"""
         try:

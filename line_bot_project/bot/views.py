@@ -199,3 +199,17 @@ class PushMessageView(View):
                 'success': False,
                 'message': str(e)
             })
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class MessageStatisticsView(View):
+    def get(self, request, tracking_id):
+        try:
+            line_service = LineMessageService()
+            result = line_service.get_message_statistics(tracking_id)
+            return JsonResponse(result)
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': str(e)
+            })
