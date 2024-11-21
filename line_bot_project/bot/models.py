@@ -33,9 +33,11 @@ class UserTag(models.Model):
                 
             # 轉換時間為日期
             df['date'] = df['tagged_at'].dt.date
-            
+            df['status'] = df['extra_data'].apply(lambda x: x.get('status', '-') if x else '-')
+
             # 統計每個用戶每天的標籤數量
-            daily_stats = df.groupby(['date', 'user_id', 'tag_name']).size().reset_index(name='tag_count')
+            daily_stats = df.groupby(['date', 'user_id', 'tag_name', 'status']).size().reset_index(name='tag_count')
+
             
             # 生成圖表
             plt.figure(figsize=(8, 4))  # 縮小圖表尺寸
@@ -83,7 +85,11 @@ class UserTag(models.Model):
             
             graph = base64.b64encode(image_png).decode('utf-8')
             
-            return daily_stats.to_dict('records'), graph
+            stats_dict = daily_stats.to_dict('records')
+            for stat in stats_dict:
+                stat['extra_data'] = {'status': stat.pop('status')}
+                
+            return stats_dict, graph
             
         except Exception as e:
             print(f"Error generating stats: {str(e)}")
