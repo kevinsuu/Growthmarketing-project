@@ -72,26 +72,70 @@ class LineMessageService:
         }
         return FlexSendMessage(alt_text='互動訊息', contents=flex_message_json)
     def send_narrowcast_message(self, tag_name, flex_message=None):
-        """發送針對性訊息並追蹤已讀狀態"""
+        """使用 API 發送針對性訊息並追蹤已讀狀態"""
         try:
             # 處理 flex_message
             if isinstance(flex_message, dict) and all(key in flex_message for key in ['image_url', 'description', 'button1_label', 'button2_label']):
                 flex_content = {
                     "type": "flex",
                     "altText": "互動訊息",
-                    "contents": self.create_custom_flex_message(
-                        image_url=flex_message['image_url'],
-                        description=flex_message['description'],
-                        button1_label=flex_message['button1_label'],
-                        button2_label=flex_message['button2_label']
-                    ).contents
+                    "contents": {
+                        "type": "bubble",
+                        "hero": {
+                            "type": "image",
+                            "url": flex_message['image_url'],
+                            "size": "full",
+                            "aspectRatio": "20:13",
+                            "aspectMode": "cover"
+                        },
+                        "body": {
+                            "type": "box",
+                            "layout": "vertical",
+                            "contents": [
+                                {
+                                    "type": "text",
+                                    "text": flex_message['description'],
+                                    "wrap": True,
+                                    "weight": "bold",
+                                    "size": "xl"
+                                }
+                            ]
+                        },
+                        "footer": {
+                            "type": "box",
+                            "layout": "horizontal",
+                            "spacing": "sm",
+                            "contents": [
+                                {
+                                    "type": "button",
+                                    "style": "primary",
+                                    "action": {
+                                        "type": "postback",
+                                        "label": flex_message['button1_label'],
+                                        "data": "action=button1"
+                                    }
+                                },
+                                {
+                                    "type": "button",
+                                    "style": "secondary",
+                                    "action": {
+                                        "type": "postback",
+                                        "label": flex_message['button2_label'],
+                                        "data": "action=button2"
+                                    }
+                                }
+                            ]
+                        }
+                    }
                 }
             else:
+                # 使用預設的 flex message
                 flex_content = {
                     "type": "flex",
                     "altText": "互動訊息",
                     "contents": self.create_flex_message().contents
                 }
+
             # 從資料庫獲取目標用戶
             users = list(UserTag.objects.filter(
                 tag_name=tag_name
@@ -106,6 +150,7 @@ class LineMessageService:
 
             logger.info(f"準備發送給用戶: {users[:500]}")
 
+            # 準備 API 請求
             url = "https://api.line.me/v2/bot/message/narrowcast"
             payload = {
                 "messages": [flex_content],
@@ -129,6 +174,7 @@ class LineMessageService:
             request_id = response.headers.get('X-Line-Request-Id', str(uuid.uuid4()))
             logger.info(f"Narrowcast 發送成功，Request ID: {request_id}")
 
+            # 記錄發送狀態
             UserTag.objects.create(
                 user_id='system',
                 tag_name=f'message_{request_id}',
@@ -138,7 +184,7 @@ class LineMessageService:
                     'user_count': len(users)
                 }
             )
-            
+
             return {
                 'success': True,
                 'request_id': request_id,
