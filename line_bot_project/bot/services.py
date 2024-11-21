@@ -154,7 +154,21 @@ class LineMessageService:
             # 準備 API 請求
             url = "https://api.line.me/v2/bot/message/narrowcast"
             payload = {
-                "messages": [flex_content]
+                 "messages": [
+                    {
+                        "type": "text",
+                        "text": "test message"
+                    }
+                ],
+                "recipient": {
+                    "type": "operator",
+                    "and": [
+                        {
+                            "type": "audience",
+                            "audienceGroupId": 9363359654509
+                        },
+                    ]
+                }
             }
             logger.info(f"Audience group ID: {audience_group_id}")
             if audience_group_id:
