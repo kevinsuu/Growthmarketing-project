@@ -76,16 +76,22 @@ class LineMessageService:
         try:
             # 處理 flex_message
             if isinstance(flex_message, dict) and all(key in flex_message for key in ['image_url', 'description', 'button1_label', 'button2_label']):
-                # 直接使用字典中的值創建自定義 Flex Message
-                flex_message = self.create_custom_flex_message(
-                    image_url=flex_message['image_url'],
-                    description=flex_message['description'],
-                    button1_label=flex_message['button1_label'],
-                    button2_label=flex_message['button2_label']
-                )
-            elif flex_message is None:
-                flex_message = self.create_flex_message()
-
+                flex_content = {
+                    "type": "flex",
+                    "altText": "互動訊息",
+                    "contents": self.create_custom_flex_message(
+                        image_url=flex_message['image_url'],
+                        description=flex_message['description'],
+                        button1_label=flex_message['button1_label'],
+                        button2_label=flex_message['button2_label']
+                    ).contents
+                }
+            else:
+                flex_content = {
+                    "type": "flex",
+                    "altText": "互動訊息",
+                    "contents": self.create_flex_message().contents
+                }
             # 從資料庫獲取目標用戶
             users = list(UserTag.objects.filter(
                 tag_name=tag_name
@@ -100,26 +106,29 @@ class LineMessageService:
 
             logger.info(f"準備發送給用戶: {users[:500]}")
 
-            # 使用 LineBotApi 發送 narrowcast
-            messages = [flex_message] if isinstance(flex_message, FlexSendMessage) else [
-                {
-                    "type": "text",
-                    "text": "Hello, targeted audience!"
-                }
-            ]
-            
-            response = self.line_bot_api.narrowcast(
-                messages=messages,
-                recipient={
+            url = "https://api.line.me/v2/bot/message/narrowcast"
+            payload = {
+                "messages": [flex_content],
+                "recipient": {
                     "type": "user_id",
                     "userIds": users[:500]  # LINE 限制最多 500 個用戶
                 }
+            }
+
+            # 發送請求
+            response = requests.post(
+                url,
+                headers=self.headers,
+                json=payload
             )
 
-            # 記錄發送狀態
-            request_id = response.request_id
+            if response.status_code != 200:
+                raise Exception(f"API 請求失敗: {response.text}")
+
+            # 取得請求 ID
+            request_id = response.headers.get('X-Line-Request-Id', str(uuid.uuid4()))
             logger.info(f"Narrowcast 發送成功，Request ID: {request_id}")
-            
+
             UserTag.objects.create(
                 user_id='system',
                 tag_name=f'message_{request_id}',
