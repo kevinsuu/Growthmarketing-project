@@ -128,7 +128,7 @@ class NarrowcastMessageView(View):
             description = data.get('description')
             button1_label = data.get('button1_label')
             button2_label = data.get('button2_label')
-
+            audience_group_id = data.get('audience_group_id')
             if not all([tag_name, image_url, description, button1_label, button2_label]):
                 return JsonResponse({
                     'success': False,
