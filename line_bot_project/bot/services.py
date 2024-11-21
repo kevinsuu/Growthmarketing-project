@@ -92,74 +92,33 @@ class LineMessageService:
             audience_group_id = flex_message['audience_group_id']
             audience_count = self.get_audience_group_count(audience_group_id)
 
-            if isinstance(flex_message, dict) and all(key in flex_message for key in ['image_url', 'description', 'button1_label', 'button2_label']):
-                flex_content = {
-                    "type": "flex",
-                    "altText": "互動訊息",
-                    "contents": {
-                        "type": "bubble",
-                        "hero": {
-                            "type": "image",
-                            "url": flex_message['image_url'],
-                            "size": "full",
-                            "aspectRatio": "20:13",
-                            "aspectMode": "cover"
-                        },
-                        "body": {
-                            "type": "box",
-                            "layout": "vertical",
-                            "contents": [
-                                {
-                                    "type": "text",
-                                    "text": flex_message['description'],
-                                    "wrap": True,
-                                    "weight": "bold",
-                                    "size": "xl"
-                                }
-                            ]
-                        },
-                        "footer": {
-                            "type": "box",
-                            "layout": "horizontal",
-                            "spacing": "sm",
-                            "contents": [
-                                {
-                                    "type": "button",
-                                    "style": "primary",
-                                    "action": {
-                                        "type": "postback",
-                                        "label": flex_message['button1_label'],
-                                        "data": "action=button1"
-                                    }
-                                },
-                                {
-                                    "type": "button",
-                                    "style": "secondary",
-                                    "action": {
-                                        "type": "postback",
-                                        "label": flex_message['button2_label'],
-                                        "data": "action=button2"
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                }
-            else:
-                # 使用預設的 flex message
-                flex_content = {
-                    "type": "flex",
-                    "altText": "互動訊息",
-                    "contents": self.create_flex_message().contents
-                }
-            
-
-
             # 準備 API 請求
             logger.info(f"Audience group ID: {audience_group_id}")
             url = "https://api.line.me/v2/bot/message/narrowcast"
             payload = {
-                "messages": [flex_content],
+                "messages": "messages": [
+                {
+                    "type": "imagemap",
+                    "baseUrl": "https://www.google.com/images/branding/googlelogo/1x/googlelogo_color_272x92dp",
+                    "altText": "點擊圖片跳轉到 Google",
+                    "baseSize": {
+                        "width": 1040,
+                        "height": 520
+                    },
+                        "actions": [
+                            {
+                                "type": "uri",
+                                "linkUri": "https://www.google.com",
+                                "area": {
+                                    "x": 0,
+                                    "y": 0,
+                                    "width": 1040,
+                                    "height": 520
+                                }
+                            }
+                        ]
+                    }
+                ],
                 "recipient": {
                     "type": "operator",
                     "and": [
