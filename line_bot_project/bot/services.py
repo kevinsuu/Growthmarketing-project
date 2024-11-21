@@ -158,6 +158,10 @@ class LineMessageService:
             # 準備 API 請求
             logger.info(f"Audience group ID: {audience_group_id}")
             url = "https://api.line.me/v2/bot/message/narrowcast"
+            tracking_config = {
+                "impression": True,  # 啟用已讀追蹤
+                "click": True       # 啟用點擊追蹤
+            }
             payload = {
                 "messages": [flex_content],
                 "recipient": {
@@ -168,7 +172,9 @@ class LineMessageService:
                             "audienceGroupId": audience_group_id
                         }
                     ]
-                }
+                },
+                "tracking": tracking_config  # 添加追蹤設定
+
             }
 
             # 發送請求
@@ -274,20 +280,33 @@ class LineMessageService:
                 tracking_id = message.tag_name.split('message_sent_')[1]
             
                 # 更新訊息狀態為已讀
+                click_url = f"{self.api_endpoint}/click"
+                click_payload = {
+                    "requestId": tracking_id,
+                    "userId": user_id
+                }
+                response = requests.post(
+                    click_url,
+                    headers=self.headers,
+                    json=click_payload
+                )
                 message.extra_data['status'] = 'read'
                 message.save()
-                click_tag = UserTag.objects.create(
-                    user_id=user_id,
-                    tag_name=f'clicked_{action}_{tracking_id}',
-                    extra_data={'status': 'clicked', 'action': action}
-                )
-                
-                return {
-                    'success': True,
-                    'tagged_at': click_tag.tagged_at.strftime('%Y-%m-%d %H:%M:%S'),
-                    'tracking_id': tracking_id,
-                    'message': '點擊追蹤成功'
-                }   
+                if response.status_code == 200:
+                # 記錄點擊事件
+                    click_tag = UserTag.objects.create(
+                        user_id=user_id,
+                        tag_name=f'clicked_{action}_{tracking_id}',
+                        extra_data={'status': 'clicked', 'action': action}
+                    )
+                    
+                    return {
+                        'success': True,
+                        'tagged_at': click_tag.tagged_at.strftime('%Y-%m-%d %H:%M:%S'),
+                        'tracking_id': tracking_id,
+                        'message': '點擊追蹤成功'
+                    }
+
 
             return {
                 'success': False,
@@ -361,29 +380,40 @@ class LineMessageService:
             recent_messages = UserTag.objects.filter(
                 user_id='narrowcast_message',
                 tag_name__startswith='message_sent_',
-                extra_data__status='send'
+                extra_data__status='sent'
             ).order_by('-tagged_at')[:5]  # 只檢查最近的5條訊息
 
             for message in recent_messages:
                 tracking_id = message.tag_name.split('message_sent_')[1]
-                
-                # 標記為已讀
-                result = self.tag_user(
-                    user_id=user_id,
-                    tag_name=f'message_read_{tracking_id}'
+                imp_url = f"{self.api_endpoint}/imp"
+                imp_payload = {
+                    "requestId": tracking_id,
+                    "userId": user_id
+                }
+                response = requests.post(
+                    imp_url,
+                    headers=self.headers,
+                    json=imp_payload
                 )
-                
-                # 更新訊息狀態
-                message.extra_data['status'] = 'read'
-                message.save()
-
-                if result['success']:
-                    return {
-                        'success': True,
-                        'tagged_at': result['tagged_at'],
-                        'tracking_id': tracking_id,
-                        'message': '已讀追蹤成功'
-                    }
+            
+                if response.status_code == 200:
+                    # 標記為已讀
+                    result = self.tag_user(
+                        user_id=user_id,
+                        tag_name=f'message_read_{tracking_id}'
+                    )
+                    
+                    # 更新訊息狀態
+                    message.extra_data['status'] = 'read'
+                    message.save()
+                    
+                    if result['success']:
+                        return {
+                            'success': True,
+                            'tagged_at': result['tagged_at'],
+                            'tracking_id': tracking_id,
+                            'message': '已讀追蹤成功'
+                        }
 
             return {
                 'success': False,
