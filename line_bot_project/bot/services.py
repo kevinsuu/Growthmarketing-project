@@ -162,7 +162,7 @@ class LineMessageService:
                 json=payload
             )
             logger.info(f"Narrowcast response code: {response.status_code}")
-            if response.status_code == 200:
+            if response.status_code == 202:
                 # 取得請求 ID
                 request_id = response.headers.get('x-line-request-id', str(uuid.uuid4()))
                 logger.info(f"Narrowcast 發送成功，Request ID: {request_id}")
