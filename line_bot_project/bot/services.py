@@ -279,7 +279,7 @@ class LineMessageService:
                 # 記錄點擊動作
                 result = self.tag_user(
                     user_id=user_id,
-                    tag_name=f'clicked_{action}_{tracking_id}'
+                    tag_name=f'message_clicked_{tracking_id}'
                 )
                 
                 if result['success']:
