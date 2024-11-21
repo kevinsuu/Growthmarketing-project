@@ -422,8 +422,17 @@ class LineMessageService:
             if response.status_code == 200:
                 insight_data = response.json()
                 read_count = insight_data.get("overview", {}).get("uniqueImpression", 0)
-
+                if total_sent == 0:
+                    return {
+                        'success': True,
+                        'statistics': {
+                            'tracking_id': tracking_id,
+                            'message': '等待 LINE 更新數據中...',
+                            'status': 'pending'
+                        }
+                    }
                 if read_count == 0.0:
+                    logger.info(f"read_count == 0.0")
                     # 取得user_tag 對應 tracking_id 的status
                     user_tag = UserTag.objects.filter(
                         tag_name=f'message_sent_{tracking_id}'
@@ -436,22 +445,7 @@ class LineMessageService:
                     tag_name=f'message_sent_{tracking_id}'
                 ).count()
 
-            if response.status_code == 200:
-                insight_data = response.json()
-                total_sent = insight_data.get("overview", {}).get("delivered", 0) or 0
-                read_count = insight_data.get("message", {}).get("impression", 0) or 0
-                if total_sent == 0:
-                    return {
-                        'success': True,
-                        'statistics': {
-                            'tracking_id': tracking_id,
-                            'message': '等待 LINE 更新數據中...',
-                            'status': 'pending'
-                        }
-                    }
-            else:
-                logger.warning(f"無法從 Insight API 獲取數據: {response.text}")
-                
+      
             # 確保數值為整數並計算比率
             total_sent = int(total_sent)
             read_count = int(read_count)
