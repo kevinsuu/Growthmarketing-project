@@ -137,39 +137,25 @@ class LineMessageService:
                     "contents": self.create_flex_message().contents
                 }
             
-            # 從資料庫獲取目標用戶
-            users = list(UserTag.objects.filter(
-                tag_name=tag_name
-            ).values_list('user_id', flat=True).distinct())
 
-            if not users:
-                logger.warning(f"找不到標籤 {tag_name} 的用戶")
-                return {
-                    'success': False,
-                    'message': f'找不到標籤 {tag_name} 的用戶'
-                }
-
-            logger.info(f"準備發送給用戶: {users[:500]}")
 
             # 準備 API 請求
+            logger.info(f"Audience group ID: {audience_group_id}")
             url = "https://api.line.me/v2/bot/message/narrowcast"
             payload = {
-                "messages": [flex_content],
-            }
-
-            users = list(UserTag.objects.filter(
-                tag_name=tag_name
-            ).values_list('user_id', flat=True).distinct())
-
-            if not users:
-                logger.warning(f"找不到標籤 {tag_name} 的用戶")
-                return {
-                    'success': False,
-                    'message': f'找不到標籤 {tag_name} 的用戶'
+                {
+                    "messages": [flex_content],
+                    "recipient": {
+                        "type": "operator",
+                        "and": [
+                            {
+                                "type": "audience",
+                                "audienceGroupId": audience_group_id
+                            }
+                        ]
+                    }
                 }
-
-            logger.info(f"準備發送給用戶: {users[:500]}")
-            payload["to"] = users[:500]  # LINE 限制最多 500 個用戶
+            }
 
             # 發送請求
             response = requests.post(
