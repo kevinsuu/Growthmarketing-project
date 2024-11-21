@@ -422,15 +422,15 @@ class LineMessageService:
             if response.status_code == 200:
                 insight_data = response.json()
                 read_count = insight_data.get("overview", {}).get("uniqueImpression", 0)
-
+                logger.info(f"read_count: {read_count}")
+                logger.info(f"type: {type(read_count)}")
                 if read_count == 0.0:
                     # 檢查按鈕點擊
                     # 取得user_tag 對應 tracking_id 的status
                     user_tag = UserTag.objects.filter(
                         tag_name=f'message_sent_{tracking_id}'
                     ).first()
-                    logger.info(f"read_count: {read_count}")
-                    logger.info(f"type: {type(read_count)}")
+      
                     read_count = 1 if user_tag and user_tag.extra_data.get('status') == 'read' else 0.0
             else:
                 logger.warning(f"無法從 Insight API 獲取數據: {response.text}")
