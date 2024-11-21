@@ -165,18 +165,7 @@ class LineMessageService:
             if response.status_code == 200:
                 # 取得請求 ID
                 request_id = response.headers.get('x-line-request-id', str(uuid.uuid4()))
-                logger.info(f"Multicast 發送成功，Request ID: {request_id}")
-
-                # 記錄發送狀態
-                UserTag.objects.create(
-                    user_id='system',
-                    tag_name=f'message_{request_id}',
-                    extra_data={
-                        'status': 'sent',
-                        'target_tag': tag_name,
-                        'user_count': len(users)
-                    }
-                )
+                logger.info(f"Narrowcast 發送成功，Request ID: {request_id}")
 
                 return {
                     'success': True,
