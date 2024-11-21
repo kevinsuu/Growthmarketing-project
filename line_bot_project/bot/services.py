@@ -413,12 +413,11 @@ class LineMessageService:
             # 計算時間範圍（從發送時間到現在）
             sent_date = sent_message.tagged_at.date()
             today = datetime.now().date()
-
+            logger.info(f"requestId{ tracking_id}")
             # 使用 Insight API 獲取訊息已讀數據
             insight_url = f"{self.statistics_endpoint}"
             params = {
                 "requestId": tracking_id,
-                "date": sent_date.strftime("%Y%m%d")
             }
             
             response = requests.get(
