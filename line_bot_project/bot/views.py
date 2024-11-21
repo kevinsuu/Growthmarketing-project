@@ -16,7 +16,10 @@ from urllib.parse import parse_qsl
 from django.views import View
 from django.shortcuts import render
 from .models import UserTag
-      
+import logging
+
+logger = logging.getLogger(__name__)
+
 @method_decorator(csrf_exempt, name='dispatch')
 class LineWebhookView(View):
     def __init__(self):
@@ -60,7 +63,7 @@ class LineWebhookView(View):
             data = dict(parse_qsl(event.postback.data))
             action = data.get('action')
             user_id = event.source.user_id
-            
+            logger.info(f"Postback event received: {data}")
             # 追蹤按鈕點擊
             click_result = self.line_service.track_message_click(user_id, action)
             
