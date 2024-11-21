@@ -399,19 +399,8 @@ class LineMessageService:
         """獲取訊息統計數據"""
         try:
             # 獲取發送記錄
-            sent_message = UserTag.objects.filter(
-                tag_name=f'message_{tracking_id}',
-                user_id='system'
-            ).first()
-
-            if not sent_message:
-                return {
-                    'success': False,
-                    'message': '找不到該訊息記錄'
-                }
-
+       
             # 計算時間範圍（從發送時間到現在）
-            sent_date = sent_message.tagged_at.date()
             today = datetime.now().date()
             logger.info(f"requestId{ tracking_id}")
             # 使用 Insight API 獲取訊息已讀數據
@@ -439,8 +428,8 @@ class LineMessageService:
     
 
             # 計算總發送數
-            total_sent = sent_message.extra_data.get('user_count', 0)
-
+            total_sent = insight_data.get("overview", {}).get("delivered", 0)
+            read_count = insight_data.get("message", {}).get("impression", 0)
             # 計算轉換率
             read_rate = (read_count / total_sent * 100) if total_sent > 0 else 0
             
@@ -452,8 +441,6 @@ class LineMessageService:
                     'total_sent': total_sent,
                     'read_count': read_count,
                     'read_rate': round(read_rate, 2),
-                    'sent_at': sent_message.tagged_at.strftime('%Y-%m-%d %H:%M:%S'),
-                    'target_tag': sent_message.extra_data.get('target_tag', 'unknown')
                 }
             }
 
