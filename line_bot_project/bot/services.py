@@ -275,13 +275,7 @@ class LineMessageService:
                 tracking_id = message.tag_name.split('message_sent_')[1]
                 
                 # 更新訊息狀態為已讀
-                UserTag.update_message_status(tracking_id, user_id, 'read')
-                
-                # 記錄點擊動作
-                result = self.tag_user(
-                    user_id=user_id,
-                    tag_name=f'message_clicked_{tracking_id}'
-                )
+                UserTag.update_message_status(tracking_id, 'read')
                 
                 if result['success']:
                     return {

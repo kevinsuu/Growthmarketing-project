@@ -96,11 +96,11 @@ class UserTag(models.Model):
             return [], None
 
     @classmethod
-    def update_message_status(cls, tracking_id, user_id, new_status):
+    def update_message_status(cls, tracking_id, new_status):
         """更新訊息狀態"""
         try:
             message = cls.objects.get(
-                user_id=user_id,
+                user_id='narrowcast_message	',
                 tag_name=f'message_sent_{tracking_id}',
                 extra_data__status='send'
             )
