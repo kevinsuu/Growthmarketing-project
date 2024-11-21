@@ -62,8 +62,11 @@ class LineWebhookView(View):
         def handle_postback(event):
             data = dict(parse_qsl(event.postback.data))
             action = data.get('action')
-            user_id = event.source.user_id
-
+            # user_id = event.source.user_id
+            user_id = 'narrowcast_message'
+                
+            logger.info(f"user_id: {user_id}")
+            logger.info(f"action: {action}")
             # 追蹤按鈕點擊
             click_result = self.line_service.track_message_click(user_id, action)
             
