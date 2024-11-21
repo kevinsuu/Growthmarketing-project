@@ -75,6 +75,7 @@ class LineMessageService:
         """使用 API 發送針對性訊息並追蹤已讀狀態"""
         try:
             # 處理 flex_message
+            audience_group_id = flex_message['audience_group_id']
             if isinstance(flex_message, dict) and all(key in flex_message for key in ['image_url', 'description', 'button1_label', 'button2_label']):
                 flex_content = {
                     "type": "flex",
@@ -135,12 +136,7 @@ class LineMessageService:
                     "altText": "互動訊息",
                     "contents": self.create_flex_message().contents
                 }
-            AudienceResponse = self.line_bot_api.get_audience_groups(
-                page=1,
-                description="",
-                status="READY"
-            )
-            logger.info(f"Audience groups: {AudienceResponse}")
+            
             # 從資料庫獲取目標用戶
             users = list(UserTag.objects.filter(
                 tag_name=tag_name
@@ -156,11 +152,31 @@ class LineMessageService:
             logger.info(f"準備發送給用戶: {users[:500]}")
 
             # 準備 API 請求
-            url = "https://api.line.me/v2/bot/message/multicast"
+            url = "https://api.line.me/v2/bot/message/narrowcast"
             payload = {
-                "messages": [flex_content],
-                "to": users[:500],  # LINE 限制最多 500 個用戶
+                "messages": [flex_content]
             }
+            logger.info(f"Audience group ID: {audience_group_id}")
+            if audience_group_id:
+                payload["recipient"] = {
+                    "type": "audience_group",
+                    "audienceGroupId": audience_group_id
+                }
+            else:
+                # 從資料庫獲取目標用戶
+                users = list(UserTag.objects.filter(
+                    tag_name=tag_name
+                ).values_list('user_id', flat=True).distinct())
+
+                if not users:
+                    logger.warning(f"找不到標籤 {tag_name} 的用戶")
+                    return {
+                        'success': False,
+                        'message': f'找不到標籤 {tag_name} 的用戶'
+                    }
+
+                logger.info(f"準備發送給用戶: {users[:500]}")
+                payload["to"] = users[:500]  # LINE 限制最多 500 個用戶
 
             # 發送請求
             response = requests.post(
