@@ -76,6 +76,7 @@ class LineMessageService:
         try:
             # 處理 flex_message
             if isinstance(flex_message, dict) and all(key in flex_message for key in ['image_url', 'description', 'button1_label', 'button2_label']):
+                # 直接使用字典中的值創建自定義 Flex Message
                 flex_message = self.create_custom_flex_message(
                     image_url=flex_message['image_url'],
                     description=flex_message['description'],
