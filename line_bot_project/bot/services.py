@@ -290,8 +290,11 @@ class LineMessageService:
                 }
                 
             response = self.line_bot_api.narrowcast(
-                messages=flex_message,
-                recipient={"type": "user_id", "userIds": users[:500]}
+                messages=[flex_message],  # 需要是列表
+                recipient={
+                    "type": "user_id",
+                    "userIds": users[:500]  # LINE 限制最多 500 個用戶
+                }
             )
             request_id = response.request_id
             logger.info(f"Narrowcast 發送成功，Request ID: {request_id}")
