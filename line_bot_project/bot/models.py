@@ -100,7 +100,7 @@ class UserTag(models.Model):
         """更新訊息狀態"""
         try:
             message = cls.objects.get(
-                user_id='narrowcast_message',
+                user_id=user_id,
                 tag_name=f'message_sent_{tracking_id}',
                 extra_data__status='send'
             )
