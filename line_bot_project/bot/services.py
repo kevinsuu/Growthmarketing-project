@@ -361,7 +361,7 @@ class LineMessageService:
             recent_messages = UserTag.objects.filter(
                 user_id='narrowcast_message',
                 tag_name__startswith='message_sent_',
-                extra_data__status='sent'
+                extra_data__status='send'
             ).order_by('-tagged_at')[:5]  # 只檢查最近的5條訊息
 
             for message in recent_messages:
@@ -376,19 +376,14 @@ class LineMessageService:
                 # 更新訊息狀態
                 message.extra_data['status'] = 'read'
                 message.save()
-            
-                click_tag = UserTag.objects.create(
-                    user_id=user_id,
-                    tag_name=f'clicked_{action}_{tracking_id}',
-                    extra_data={'status': 'clicked', 'action': action}
-                )
-                
-                return {
-                    'success': True,
-                    'tagged_at': click_tag.tagged_at.strftime('%Y-%m-%d %H:%M:%S'),
-                    'tracking_id': tracking_id,
-                    'message': '點擊追蹤成功'
-                }  
+
+                if result['success']:
+                    return {
+                        'success': True,
+                        'tagged_at': result['tagged_at'],
+                        'tracking_id': tracking_id,
+                        'message': '已讀追蹤成功'
+                    }
 
             return {
                 'success': False,

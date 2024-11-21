@@ -67,16 +67,11 @@ class LineWebhookView(View):
             logger.info(f"收到 Postback 事件")
             logger.info(f"用戶ID: {user_id}")
             logger.info(f"動作: {action}")
-            impression_result = self.line_service.track_message_impression(user_id)
-            logger.info(f"已讀追蹤結果: {impression_result}")
-            
-            # 再追蹤按鈕點擊
             click_result = self.line_service.track_message_click(user_id, action)
-            logger.info(f"點擊追蹤結果: {click_result}")
             
             if click_result['success']:
                 reply_message = (
-                    f"點擊追蹤成功\n"
+                    f"點擊活動成功\n"
                     f"追蹤ID: {click_result.get('tracking_id', 'N/A')}\n"
                     f"時間: {click_result['tagged_at']}\n"
                     f"用戶ID: {user_id}\n"
@@ -84,7 +79,9 @@ class LineWebhookView(View):
                 )
             else:
                 reply_message = (
-                    f"點擊追蹤失敗\n"
+                    f"點擊活動失敗\n"
+                    f"用戶ID: {user_id}\n"
+                    f"動作: {action}\n"
                     f"錯誤: {click_result['message']}"
                 )
             
@@ -128,7 +125,7 @@ class NarrowcastMessageView(View):
             description = data.get('description')
             button1_label = data.get('button1_label')
             button2_label = data.get('button2_label')
-            audience_group_id = data.get('audience_group_id')
+
             if not all([tag_name, image_url, description, button1_label, button2_label]):
                 return JsonResponse({
                     'success': False,
@@ -148,7 +145,7 @@ class NarrowcastMessageView(View):
             })
             
             # 發送 narrowcast 訊息
-            # result = line_service.send_narrowcast_message(tag_name, data)
+            result = line_service.send_narrowcast_message(tag_name, data)
 
             print(f"發送結果: {result}")  # 添加調試信息
 
