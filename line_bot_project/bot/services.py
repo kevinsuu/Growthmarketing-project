@@ -76,6 +76,7 @@ class LineMessageService:
         try:
             url = f"{self.api_endpoint}/{audience_group_id}"
             response = requests.get(url, headers=self.headers)
+            logger.info(f"Audience group count response code: {response.status_code}")
             if response.status_code == 200:
                 group_info = response.json()
                 return group_info.get('audienceCount', 0)
