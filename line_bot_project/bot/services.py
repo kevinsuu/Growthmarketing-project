@@ -406,27 +406,41 @@ class LineMessageService:
                     'message': '找不到該訊息記錄'
                 }
 
-            # 獲取已讀數據
-            read_count = UserTag.objects.filter(
-                tag_name=f'message_read_{tracking_id}'
-            ).count()
+            # 計算時間範圍（從發送時間到現在）
+            sent_date = sent_message.tagged_at.date()
+            today = datetime.now().date()
 
-            # 獲取點擊數據
-            button1_clicks = UserTag.objects.filter(
-                tag_name=f'clicked_button1_{tracking_id}'
-            ).count()
+            # 使用 Insight API 獲取訊息已讀數據
+            insight_url = f"{self.statistics_endpoint}"
+            params = {
+                "requestId": tracking_id,
+                "date": sent_date.strftime("%Y%m%d")
+            }
             
-            button2_clicks = UserTag.objects.filter(
-                tag_name=f'clicked_button2_{tracking_id}'
-            ).count()
+            response = requests.get(
+                insight_url,
+                headers=self.headers,
+                params=params
+            )
+
+            if response.status_code == 200:
+                insight_data = response.json()
+                read_count = insight_data.get("overview", {}).get("uniqueImpression", 0)
+            else:
+                logger.warning(f"無法從 Insight API 獲取數據: {response.text}")
+                # 如果 API 失敗，使用資料庫的數據作為備用
+                read_count = UserTag.objects.filter(
+                    tag_name=f'message_read_{tracking_id}'
+                ).count()
+
+    
 
             # 計算總發送數
             total_sent = sent_message.extra_data.get('user_count', 0)
 
             # 計算轉換率
             read_rate = (read_count / total_sent * 100) if total_sent > 0 else 0
-            button1_rate = (button1_clicks / total_sent * 100) if total_sent > 0 else 0
-            button2_rate = (button2_clicks / total_sent * 100) if total_sent > 0 else 0
+            
 
             return {
                 'success': True,
@@ -434,11 +448,7 @@ class LineMessageService:
                     'tracking_id': tracking_id,
                     'total_sent': total_sent,
                     'read_count': read_count,
-                    'button1_clicks': button1_clicks,
-                    'button2_clicks': button2_clicks,
                     'read_rate': round(read_rate, 2),
-                    'button1_click_rate': round(button1_rate, 2),
-                    'button2_click_rate': round(button2_rate, 2),
                     'sent_at': sent_message.tagged_at.strftime('%Y-%m-%d %H:%M:%S'),
                     'target_tag': sent_message.extra_data.get('target_tag', 'unknown')
                 }
