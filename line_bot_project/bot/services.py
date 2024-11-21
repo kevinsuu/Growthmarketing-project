@@ -293,10 +293,8 @@ class LineMessageService:
             payload = {
                 "messages": [flex_message.as_json_dict()],
                 "recipient": {
-                    "type": "user_id_list",
-                    "audience": {
-                        "userIds": users
-                    }
+                    "type": "user_id",
+                    "userIds": users[:500]  # LINE 限制最多 500 個用戶
                 }
             }
 
