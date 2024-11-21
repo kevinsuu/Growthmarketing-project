@@ -429,18 +429,15 @@ class LineMessageService:
                     user_tag = UserTag.objects.filter(
                         tag_name=f'message_sent_{tracking_id}'
                     ).first()
+                    logger.info(f"read_count: {read_count}")
+                    logger.info(f"type: {type(read_count)}")
                     read_count = 1 if user_tag and user_tag.extra_data.get('status') == 'read' else 0.0
             else:
                 logger.warning(f"無法從 Insight API 獲取數據: {response.text}")
-                # 如果 API 失敗，使用資料庫的數據作為備用
-                read_count = UserTag.objects.filter(
-                    tag_name=f'message_sent_{tracking_id}'
-                ).count()
 
             if response.status_code == 200:
                 insight_data = response.json()
                 total_sent = insight_data.get("overview", {}).get("delivered", 0) or 0
-                read_count = insight_data.get("message", {}).get("impression", 0) or 0
                 if total_sent == 0:
                     return {
                         'success': True,
