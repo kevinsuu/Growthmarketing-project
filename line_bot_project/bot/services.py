@@ -267,9 +267,9 @@ class LineMessageService:
             recent_messages = UserTag.objects.filter(
                 user_id=user_id,
                 tag_name__startswith='message_sent_',
-                extra_data__status='delivered'
+                extra_data__status='sent'
             ).order_by('-tagged_at')[:5]  # 只檢查最近的5條訊息
-
+            logger.info(f"recent_messages: {recent_messages}")
             for message in recent_messages:
                 tracking_id = message.tag_name.split('message_sent_')[1]
                 
