@@ -423,6 +423,7 @@ class LineMessageService:
             if response.status_code == 200:
                 insight_data = response.json()
                 read_count = insight_data.get("overview", {}).get("uniqueImpression", 0)
+                total_sent = insight_data.get("overview", {}).get("delivered", 0)
                 if total_sent == 0:
                     return {
                         'success': True,
