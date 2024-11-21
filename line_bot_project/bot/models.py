@@ -26,7 +26,7 @@ class UserTag(models.Model):
         """獲取每日標籤統計數據"""
         try:
             tags = cls.objects.all()
-            df = pd.DataFrame(list(tags.values('user_id', 'tag_name', 'tagged_at')))
+            df = pd.DataFrame(list(tags.values('user_id', 'tag_name', 'tagged_at', 'extra_data')))
             
             if df.empty:
                 return [], None
@@ -96,7 +96,7 @@ class UserTag(models.Model):
             message = cls.objects.get(
                 user_id=user_id,
                 tag_name=f'message_sent_{tracking_id}',
-                extra_data__status='delivered'
+                extra_data__status='send'
             )
             message.extra_data['status'] = new_status
             message.save()
