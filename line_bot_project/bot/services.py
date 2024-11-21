@@ -419,6 +419,7 @@ class LineMessageService:
             # 計算總發送數
             total_sent = 0
             read_count = 0
+            logger.info(f"response.status_code: {response.status_code}")
             if response.status_code == 200:
                 insight_data = response.json()
                 read_count = insight_data.get("overview", {}).get("uniqueImpression", 0)
@@ -431,6 +432,7 @@ class LineMessageService:
                             'status': 'pending'
                         }
                     }
+                logger.info(f"read_count: {read_count}")
                 if read_count == 0.0:
                     logger.info(f"read_count == 0.0")
                     # 取得user_tag 對應 tracking_id 的status
