@@ -8,6 +8,9 @@ from django.db import models
 matplotlib.rcParams['font.sans-serif'] = ['Arial Unicode MS', 'Microsoft YaHei', 'SimHei', 'sans-serif']
 matplotlib.rcParams['axes.unicode_minus'] = False  
 import matplotlib.pyplot as plt
+import logging
+
+logger = logging.getLogger(__name__)
 
 class UserTag(models.Model):
     user_id = models.CharField(max_length=50)
@@ -99,8 +102,9 @@ class UserTag(models.Model):
     def update_message_status(cls, tracking_id, new_status):
         """更新訊息狀態"""
         try:
+            logger.info(f"tracking_id: {tracking_id}")
             message = cls.objects.get(
-                user_id='narrowcast_message	',
+                user_id='narrowcast_message',
                 tag_name=f'message_sent_{tracking_id}',
                 extra_data__status='send'
             )
