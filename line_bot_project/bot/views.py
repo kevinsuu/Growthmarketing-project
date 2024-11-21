@@ -130,12 +130,12 @@ class NarrowcastMessageView(View):
             line_service = LineMessageService()
             
             # 創建自定義 Flex Message
-            flex_message = {
-                'image_url': image_url,
-                'description': description,
-                'button1_label': button1_label,
-                'button2_label': button2_label
-            }
+            flex_message = line_service.create_custom_flex_message(
+                image_url=image_url,
+                description=description,
+                button1_label=button1_label,
+                button2_label=button2_label
+            )
             
             # 發送 narrowcast 訊息
             result = line_service.send_narrowcast_message(tag_name, flex_message)

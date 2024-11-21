@@ -7,7 +7,7 @@ from datetime import datetime
 import logging
 from .models import UserTag
 from datetime import datetime, timedelta
-import json 
+
 logger = logging.getLogger(__name__)
 
 class LineMessageService:
@@ -71,48 +71,68 @@ class LineMessageService:
             }
         }
         return FlexSendMessage(alt_text='互動訊息', contents=flex_message_json)
-    def get_message_statistics(self, request_id):
-        """透過 LINE API 獲取訊息統計數據"""
+    def send_narrowcast_message(self, tag_name, flex_message=None):
+        """發送針對性訊息並追蹤已讀狀態"""
         try:
-            # 構建請求 URL
-            url = f"{self.statistics_endpoint}"
-            
-            # 設置查詢參數
-            params = {
-                "requestId": request_id
-            }
-            
-            # 發送 GET 請求
-            response = requests.get(
-                url,
-                headers=self.headers,
-                params=params
-            )
-            
-            if response.status_code == 200:
-                data = response.json()
-                return {
-                    'success': True,
-                    'request_id': request_id,
-                    'statistics': {
-                        'impression': data.get('impression', 0),  # 已讀數
-                        'click': data.get('click', 0),  # 點擊數
-                        'unique_impression': data.get('uniqueImpression', 0),  # 不重複已讀數
-                        'unique_click': data.get('uniqueClick', 0),  # 不重複點擊數
-                        'message_status': data.get('status', 'unknown')  # 訊息狀態
-                    }
-                }
-            else:
+            # 處理 flex_message
+            if isinstance(flex_message, dict) and all(key in flex_message for key in ['image_url', 'description', 'button1_label', 'button2_label']):
+                flex_message = self.create_custom_flex_message(
+                    image_url=flex_message['image_url'],
+                    description=flex_message['description'],
+                    button1_label=flex_message['button1_label'],
+                    button2_label=flex_message['button2_label']
+                )
+            elif flex_message is None:
+                flex_message = self.create_flex_message()
+
+            # 從資料庫獲取目標用戶
+            users = list(UserTag.objects.filter(
+                tag_name=tag_name
+            ).values_list('user_id', flat=True).distinct())
+
+            if not users:
+                logger.warning(f"找不到標籤 {tag_name} 的用戶")
                 return {
                     'success': False,
-                    'message': f'API 請求失敗: {response.status_code}',
-                    'detail': response.text
+                    'message': f'找不到標籤 {tag_name} 的用戶'
                 }
 
+            logger.info(f"準備發送給用戶: {users[:500]}")
+
+            # 使用 LineBotApi 發送 narrowcast
+            response = self.line_bot_api.narrowcast(
+                messages=[flex_message],  # 需要是列表
+                recipient={
+                    "type": "user_id",
+                    "userIds": users[:500]  # LINE 限制最多 500 個用戶
+                }
+            )
+
+            # 記錄發送狀態
+            request_id = response.request_id
+            logger.info(f"Narrowcast 發送成功，Request ID: {request_id}")
+            
+            UserTag.objects.create(
+                user_id='system',
+                tag_name=f'message_{request_id}',
+                extra_data={
+                    'status': 'sent',
+                    'target_tag': tag_name,
+                    'user_count': len(users)
+                }
+            )
+            
+            return {
+                'success': True,
+                'request_id': request_id,
+                'message': f'訊息已發送給 {len(users)} 位用戶'
+            }
+
         except Exception as e:
+            logger.error(f"發送錯誤: {str(e)}")
             return {
                 'success': False,
-                'message': f'獲取統計數據失敗: {str(e)}'
+                'message': f'發送錯誤: {str(e)}'
             }
     def tag_user(self, user_id, tag_name):
         """為用戶添加標籤"""
@@ -276,6 +296,15 @@ class LineMessageService:
             elif flex_message is None:
                 flex_message = self.create_flex_message()
 
+            # 生成唯一的追蹤 ID
+            tracking_id = str(uuid.uuid4())
+            
+            # 在發送訊息前，先記錄這個追蹤 ID
+            UserTag.objects.create(
+                user_id='system',
+                tag_name=f'message_{tracking_id}',
+                extra_data={'status': 'sent'}
+            )
 
             # 從資料庫獲取目標用戶
             users = list(UserTag.objects.filter(
@@ -288,33 +317,40 @@ class LineMessageService:
                     'success': False,
                     'message': f'找不到標籤 {tag_name} 的用戶'
                 }
-                
-            response = self.line_bot_api.narrowcast(
-                messages=[flex_message],  # 需要是列表
-                recipient={
-                    "type": "user_id",
-                    "userIds": users[:500]  # LINE 限制最多 500 個用戶
-                }
-            )
-            request_id = response.request_id
-            logger.info(f"Narrowcast 發送成功，Request ID: {request_id}")
-            
-            UserTag.objects.create(
-                user_id='system',
-                tag_name=f'message_{request_id}',
-                extra_data={
-                    'status': 'sent',
-                    'target_tag': tag_name,
-                    'user_count': len(users)
-                }
-            )
+
+            # 分批發送
+            batch_size = 500
+            success_count = 0
+            failed_count = 0
+
+            for i in range(0, len(users), batch_size):
+                batch_users = users[i:i + batch_size]
+                try:
+                    self.line_bot_api.multicast(
+                        to=batch_users,
+                        messages=flex_message,
+                        retry_key=tracking_id
+                    )
+                    success_count += len(batch_users)
+                    
+                    # 記錄發送成功的用戶
+                    UserTag.objects.bulk_create([
+                        UserTag(
+                            user_id=user_id,
+                            tag_name=f'message_sent_{tracking_id}',
+                            extra_data={'status': 'delivered'}
+                        ) for user_id in batch_users
+                    ])
+                        
+                except Exception as e:
+                    failed_count += len(batch_users)
+                    logger.error(f"批次發送失敗: {str(e)}")
+            logger.info(f"發送完成: 成功 {success_count} 人, 失敗 {failed_count} 人")
             return {
                 'success': True,
-                'request_id': request_id,
-                'message': f'訊息已發送給 {len(users)} 位用戶'
+                'tracking_id': tracking_id,
+                'message': f'發送完成: 成功 {success_count} 人, 失敗 {failed_count} 人'
             }
-
-
 
         except Exception as e:
             logger.error(f"發送錯誤: {str(e)}")
