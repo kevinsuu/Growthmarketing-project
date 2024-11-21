@@ -96,7 +96,7 @@ class LineMessageService:
             logger.info(f"Audience group ID: {audience_group_id}")
             url = "https://api.line.me/v2/bot/message/narrowcast"
             payload = {
-                "messages": "messages": [
+                "messages": [
                 {
                     "type": "imagemap",
                     "baseUrl": "https://www.google.com/images/branding/googlelogo/1x/googlelogo_color_272x92dp",
