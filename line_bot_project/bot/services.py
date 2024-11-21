@@ -303,9 +303,16 @@ class LineMessageService:
                 }
             }
 
+            # 添加調試日誌
+            logger.info(f"Narrowcast payload: {json.dumps(payload, indent=2)}")
+
             # 發送 narrowcast 請求
             response = requests.post(url, headers=self.headers, json=payload)
             
+            # 添加調試日誌
+            logger.info(f"Response status: {response.status_code}")
+            logger.info(f"Response headers: {dict(response.headers)}")
+            logger.info(f"Response body: {response.text}")
             if response.status_code == 200:
                 request_id = response.headers.get('X-Line-Request-Id')
                 logger.info(f"Narrowcast 發送成功，Request ID: {request_id}")
