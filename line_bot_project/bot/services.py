@@ -7,7 +7,7 @@ from datetime import datetime
 import logging
 from .models import UserTag
 from datetime import datetime, timedelta
-
+import json 
 logger = logging.getLogger(__name__)
 
 class LineMessageService:
