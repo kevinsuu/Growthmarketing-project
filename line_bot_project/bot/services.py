@@ -102,7 +102,12 @@ class LineMessageService:
 
             # 使用 LineBotApi 發送 narrowcast
             response = self.line_bot_api.narrowcast(
-                messages=[flex_message],  # 需要是列表
+                messages=[
+                    {
+                        "type": "text",
+                        "text": "test message"
+                    }
+                ], 
                 recipient={
                     "type": "user_id",
                     "userIds": users[:500]  # LINE 限制最多 500 個用戶
