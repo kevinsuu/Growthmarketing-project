@@ -64,13 +64,19 @@ class LineWebhookView(View):
             action = data.get('action')
             user_id = event.source.user_id
             
-            logger.info(f"Postback event received: {data}")
-            # 追蹤按鈕點擊
+            logger.info(f"收到 Postback 事件")
+            logger.info(f"用戶ID: {user_id}")
+            logger.info(f"動作: {action}")
+            impression_result = self.line_service.track_message_impression(user_id)
+            logger.info(f"已讀追蹤結果: {impression_result}")
+            
+            # 再追蹤按鈕點擊
             click_result = self.line_service.track_message_click(user_id, action)
+            logger.info(f"點擊追蹤結果: {click_result}")
             
             if click_result['success']:
                 reply_message = (
-                    f"點擊活動成功\n"
+                    f"點擊追蹤成功\n"
                     f"追蹤ID: {click_result.get('tracking_id', 'N/A')}\n"
                     f"時間: {click_result['tagged_at']}\n"
                     f"用戶ID: {user_id}\n"
@@ -78,9 +84,7 @@ class LineWebhookView(View):
                 )
             else:
                 reply_message = (
-                    f"點擊活動失敗\n"
-                    f"用戶ID: {user_id}\n"
-                    f"動作: {action}\n"
+                    f"點擊追蹤失敗\n"
                     f"錯誤: {click_result['message']}"
                 )
             
@@ -134,12 +138,14 @@ class NarrowcastMessageView(View):
             line_service = LineMessageService()
             
             # 創建自定義 Flex Message
-            # flex_message = line_service.create_custom_flex_message(
-            #     image_url=image_url,
-            #     description=description,
-            #     button1_label=button1_label,
-            #     button2_label=button2_label
-            # )
+            result = line_service.send_narrowcast_message(tag_name, {
+                'audience_group_id': audience_group_id,
+                'image_url': data.get('image_url'),
+                'description': data.get('description'),
+                'button1_label': data.get('button1_label'),
+                'button2_label': data.get('button2_label'),
+                'tracking_enabled': True  # 啟用追蹤
+            })
             
             # 發送 narrowcast 訊息
             result = line_service.send_narrowcast_message(tag_name, data)
