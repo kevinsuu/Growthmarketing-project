@@ -71,11 +71,25 @@ class LineMessageService:
             }
         }
         return FlexSendMessage(alt_text='互動訊息', contents=flex_message_json)
+    def get_audience_group_count(self, audience_group_id):
+        """獲取受眾群組的用戶數量"""
+        try:
+            url = f"{self.api_endpoint}/{audience_group_id}"
+            response = requests.get(url, headers=self.headers)
+            if response.status_code == 200:
+                group_info = response.json()
+                return group_info.get('audienceCount', 0)
+            return 0
+        except Exception as e:
+            logger.error(f"獲取受眾群組數量失敗: {str(e)}")
+            return 0
     def send_narrowcast_message(self, tag_name, flex_message=None):
         """使用 API 發送針對性訊息並追蹤已讀狀態"""
         try:
             # 處理 flex_message
             audience_group_id = flex_message['audience_group_id']
+            audience_count = self.get_audience_group_count(audience_group_id)
+
             if isinstance(flex_message, dict) and all(key in flex_message for key in ['image_url', 'description', 'button1_label', 'button2_label']):
                 flex_content = {
                     "type": "flex",
@@ -166,11 +180,11 @@ class LineMessageService:
                 # 取得請求 ID
                 request_id = response.headers.get('x-line-request-id', str(uuid.uuid4()))
                 logger.info(f"Narrowcast 發送成功，Request ID: {request_id}")
-
+                
                 return {
                     'success': True,
                     'request_id': request_id,
-                    'message': f'訊息已發送給 {len(users)} 位用戶'
+                    'message': f'訊息已發送給 {audience_count} 位用戶'
                 }
             else:
                 error_message = response.text if response.text else f"HTTP 狀態碼: {response.status_code}"
