@@ -377,13 +377,18 @@ class LineMessageService:
                 message.extra_data['status'] = 'read'
                 message.save()
 
-                if result['success']:
-                    return {
-                        'success': True,
-                        'tagged_at': result['tagged_at'],
-                        'tracking_id': tracking_id,
-                        'message': '已讀追蹤成功'
-                    }
+                click_tag = UserTag.objects.create(
+                    user_id=user_id,
+                    tag_name=f'clicked_{action}_{tracking_id}',
+                    extra_data={'status': 'clicked', 'action': action}
+                )
+                
+                return {
+                    'success': True,
+                    'tagged_at': click_tag.tagged_at.strftime('%Y-%m-%d %H:%M:%S'),
+                    'tracking_id': tracking_id,
+                    'message': '點擊追蹤成功'
+                }   
 
             return {
                 'success': False,
