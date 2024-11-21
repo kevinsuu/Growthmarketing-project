@@ -415,27 +415,12 @@ class LineMessageService:
                 params=params
             )
 
-            if response.status_code == 200:
-                insight_data = response.json()
-                read_count = insight_data.get("overview", {}).get("uniqueImpression", 0)
-            else:
-                logger.warning(f"無法從 Insight API 獲取數據: {response.text}")
-                # 如果 API 失敗，使用資料庫的數據作為備用
-                read_count = UserTag.objects.filter(
-                    tag_name=f'message_read_{tracking_id}'
-                ).count()
-
-    
-
             # 計算總發送數
             total_sent = 0
             read_count = 0
-
             if response.status_code == 200:
                 insight_data = response.json()
-                # 確保使用 get() 方法時提供預設值 0
                 total_sent = insight_data.get("overview", {}).get("delivered", 0) or 0
-                read_count = insight_data.get("message", {}).get("impression", 0) or 0
                 if total_sent == 0:
                     return {
                         'success': True,
@@ -445,9 +430,28 @@ class LineMessageService:
                             'status': 'pending'
                         }
                     }
+                read_count = insight_data.get("overview", {}).get("uniqueImpression", 0)
+                if read_count == 0:
+                    button1_count = UserTag.objects.filter(
+                        tag_name=f'clicked_button1_{tracking_id}'
+                    ).count()
+                    
+                    button2_count = UserTag.objects.filter(
+                        tag_name=f'clicked_button2_{tracking_id}'
+                    ).count()
+                    
+                    # 若有任一存在，則記一筆
+                    if button1_count > 0 or button2_count > 0:
+                        read_count = 1
+                    else:
+                        read_count = 0
             else:
                 logger.warning(f"無法從 Insight API 獲取數據: {response.text}")
-                
+                # 如果 API 失敗，使用資料庫的數據作為備用
+                read_count = UserTag.objects.filter(
+                    tag_name=f'message_read_{tracking_id}'
+                ).count()
+
             # 確保數值為整數並計算比率
             total_sent = int(total_sent)
             read_count = int(read_count)
