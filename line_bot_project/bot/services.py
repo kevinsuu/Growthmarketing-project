@@ -151,7 +151,7 @@ class LineMessageService:
             logger.info(f"準備發送給用戶: {users[:500]}")
 
             # 準備 API 請求
-            url = "https://api.line.me/v2/bot/message/narrowcast"
+            url = "https://api.line.me/v2/bot/message/multicast"
             payload = {
                 "messages": [flex_content],
                 "to": users[:500],  # LINE 限制最多 500 個用戶
@@ -164,29 +164,35 @@ class LineMessageService:
                 json=payload
             )
 
-            if response.status_code != 200:
-                raise Exception(f"API 請求失敗: {response.text}")
+            if response.status_code == 200:
+                # 取得請求 ID
+                request_id = response.headers.get('X-Line-Request-Id', str(uuid.uuid4()))
+                logger.info(f"Multicast 發送成功，Request ID: {request_id}")
 
-            # 取得請求 ID
-            request_id = response.headers.get('X-Line-Request-Id', str(uuid.uuid4()))
-            logger.info(f"Narrowcast 發送成功，Request ID: {request_id}")
+                # 記錄發送狀態
+                UserTag.objects.create(
+                    user_id='system',
+                    tag_name=f'message_{request_id}',
+                    extra_data={
+                        'status': 'sent',
+                        'target_tag': tag_name,
+                        'user_count': len(users)
+                    }
+                )
 
-            # 記錄發送狀態
-            UserTag.objects.create(
-                user_id='system',
-                tag_name=f'message_{request_id}',
-                extra_data={
-                    'status': 'sent',
-                    'target_tag': tag_name,
-                    'user_count': len(users)
+                return {
+                    'success': True,
+                    'request_id': request_id,
+                    'message': f'訊息已發送給 {len(users)} 位用戶'
                 }
-            )
+            else:
+                error_message = response.text if response.text else f"HTTP 狀態碼: {response.status_code}"
+                logger.error(f"API 請求失敗: {error_message}")
+                return {
+                    'success': False,
+                    'message': f'發送失敗: {error_message}'
+                }
 
-            return {
-                'success': True,
-                'request_id': request_id,
-                'message': f'訊息已發送給 {len(users)} 位用戶'
-            }
 
         except Exception as e:
             logger.error(f"發送錯誤: {str(e)}")
