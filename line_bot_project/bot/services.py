@@ -143,17 +143,15 @@ class LineMessageService:
             logger.info(f"Audience group ID: {audience_group_id}")
             url = "https://api.line.me/v2/bot/message/narrowcast"
             payload = {
-                {
-                    "messages": [flex_content],
-                    "recipient": {
-                        "type": "operator",
-                        "and": [
-                            {
-                                "type": "audience",
-                                "audienceGroupId": audience_group_id
-                            }
-                        ]
-                    }
+                "messages": [flex_content],
+                "recipient": {
+                    "type": "operator",
+                    "and": [
+                        {
+                            "type": "audience",
+                            "audienceGroupId": audience_group_id
+                        }
+                    ]
                 }
             }
 
@@ -166,7 +164,7 @@ class LineMessageService:
 
             if response.status_code == 200:
                 # 取得請求 ID
-                request_id = response.headers.get('X-Line-Request-Id', str(uuid.uuid4()))
+                request_id = response.headers.get('x-line-request-id', str(uuid.uuid4()))
                 logger.info(f"Multicast 發送成功，Request ID: {request_id}")
 
                 # 記錄發送狀態
