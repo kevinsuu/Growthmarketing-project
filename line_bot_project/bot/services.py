@@ -418,6 +418,17 @@ class LineMessageService:
             if response.status_code == 200:
                 insight_data = response.json()
                 read_count = insight_data.get("overview", {}).get("uniqueImpression", 0)
+
+                if read_count == 0.0:
+                    # 檢查按鈕點擊
+                    button1_count = UserTag.objects.filter(
+                        tag_name=f'clicked_button1_{tracking_id}'
+                    ).count()
+                    
+                    button2_count = UserTag.objects.filter(
+                        tag_name=f'clicked_button2_{tracking_id}'
+                    ).count()
+                    read_count = 1 if (button1_count > 0 or button2_count > 0) else 0.0
             else:
                 logger.warning(f"無法從 Insight API 獲取數據: {response.text}")
                 # 如果 API 失敗，使用資料庫的數據作為備用
