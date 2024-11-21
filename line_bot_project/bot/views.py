@@ -115,13 +115,12 @@ class NarrowcastMessageView(View):
             data = json.loads(request.body)
             print(f"收到的請求數據: {data}")  # 添加調試信息
             
-            tag_name = data.get('tag_name')
             image_url = data.get('image_url')
             description = data.get('description')
             button1_label = data.get('button1_label')
             button2_label = data.get('button2_label')
-
-            if not all([tag_name, image_url, description, button1_label, button2_label]):
+            
+            if not all([ image_url, description, button1_label, button2_label]):
                 return JsonResponse({
                     'success': False,
                     'message': '缺少必要參數'
