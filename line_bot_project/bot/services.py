@@ -154,19 +154,14 @@ class LineMessageService:
             # 準備 API 請求
             url = "https://api.line.me/v2/bot/message/narrowcast"
             payload = {
-                 "messages": [
-                    {
-                        "type": "text",
-                        "text": "test message"
-                    }
-                ],
+                "messages": [flex_content],
                 "recipient": {
                     "type": "operator",
                     "and": [
                         {
                             "type": "audience",
                             "audienceGroupId": 9363359654509
-                        },
+                        }
                     ]
                 }
             }
