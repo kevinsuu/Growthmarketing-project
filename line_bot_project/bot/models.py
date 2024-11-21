@@ -108,6 +108,7 @@ class UserTag(models.Model):
                 tag_name=f'message_sent_{tracking_id}',
                 extra_data__status='send'
             )
+            logger.info(f"message: {message}")
             message.extra_data['status'] = new_status
             message.save()
             return True
